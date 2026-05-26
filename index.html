@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ЕНТ — тренажёр</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand__title">ЕНТ — тренажёр</div>
+          <div class="brand__subtitle" id="datasetMeta">Загрузка…</div>
+        </div>
+
+        <div class="topbar__actions">
+          <select id="topicSelect" class="control control--select" aria-label="Тема"></select>
+          <button id="btnNew" class="control control--button">Новый вопрос</button>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="card" aria-live="polite">
+          <div class="card__header">
+            <div class="pill" id="qTopic">—</div>
+            <div class="muted" id="qIndex">—</div>
+          </div>
+
+          <h1 class="question" id="qText">Загрузка…</h1>
+
+          <div class="options" id="options"></div>
+
+          <div class="card__footer">
+            <div class="muted" id="feedback">Выберите вариант ответа.</div>
+            <div class="footer__actions">
+              <button id="btnReveal" class="control control--button control--ghost">Показать ответ</button>
+              <button id="btnNext" class="control control--button control--primary" disabled>Дальше</button>
+            </div>
+          </div>
+        </section>
+
+        <aside class="side">
+          <section class="panel">
+            <div class="panel__title">Статистика</div>
+            <div class="stats">
+              <div class="stat">
+                <div class="stat__label">Правильно</div>
+                <div class="stat__value" id="stCorrect">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Неправильно</div>
+                <div class="stat__value" id="stWrong">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat__label">Точность</div>
+                <div class="stat__value" id="stAccuracy">0%</div>
+              </div>
+            </div>
+
+            <div class="panel__actions">
+              <button id="btnReset" class="control control--button control--danger">Сбросить</button>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel__title">Подсказки</div>
+            <div class="muted">
+              - Можно выбирать тему сверху.<br />
+              - «Показать ответ» не влияет на статистику.<br />
+              - Данные лежат в <code>data/questions.json</code>.
+            </div>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>

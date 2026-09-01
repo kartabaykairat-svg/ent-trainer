@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     templates_dir: Path = BACKEND_DIR / "templates"
     calc_config_path: Path = BACKEND_DIR / "app" / "config" / "calc_config.yaml"
 
+    # Set by the production Docker image (see insurance-agent/Dockerfile) to
+    # the compiled frontend's dist/ directory. When set and present, the API
+    # serves the built frontend itself so the whole app is one URL/process.
+    # Empty in local dev, where the Vite dev server runs separately.
+    frontend_dist: Path | None = None
+
     @property
     def uploads_dir(self) -> Path:
         return self.storage_dir / "uploads"

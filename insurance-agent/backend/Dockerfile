@@ -1,3 +1,8 @@
+# Backend-only image (API on its own, frontend hosted/deployed separately).
+# For a single-container/single-URL deploy (recommended - see
+# ../../render.yaml and README "Деплой на Render"), build
+# ../Dockerfile from the insurance-agent/ directory instead.
+
 FROM python:3.11-slim
 
 # tesseract-ocr (+ rus/kaz language packs) for OCR, libreoffice-writer for

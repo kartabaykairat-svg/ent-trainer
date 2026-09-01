@@ -1,8 +1,10 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
 from app.database import Base, SessionLocal, engine
@@ -54,3 +56,23 @@ app.include_router(dashboard.router)
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+
+# --- Serve the compiled frontend, if this image was built with one --------
+# (see insurance-agent/Dockerfile). Mounted last so it never shadows an
+# /api/* route above. A catch-all SPA fallback sends any non-file, non-/api
+# path to index.html so client-side routes (e.g. /clients/abc) work on a
+# hard refresh.
+if settings.frontend_dist and settings.frontend_dist.exists():
+    assets_dir = settings.frontend_dist / "assets"
+    if assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="frontend-assets")
+
+    @app.get("/{full_path:path}")
+    def serve_frontend(full_path: str):
+        if full_path.startswith("api/"):
+            raise HTTPException(status_code=404)
+        candidate = settings.frontend_dist / full_path
+        if full_path and candidate.is_file():
+            return FileResponse(candidate)
+        return FileResponse(settings.frontend_dist / "index.html")

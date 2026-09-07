@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test di livello d'italiano — A1/A2/B1/B2</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <!-- ================= START SCREEN ================= -->
+      <section id="screen-start" class="screen">
+        <div class="lang-switch" role="group" aria-label="Interface language">
+          <button class="lang-btn" data-lang="ru" id="langBtnRu">RU</button>
+          <button class="lang-btn" data-lang="en" id="langBtnEn">EN</button>
+        </div>
+
+        <div class="start-card">
+          <div class="flag-stripe" aria-hidden="true"></div>
+          <h1 id="appTitle" class="start-title">—</h1>
+          <div id="appSubtitle" class="start-subtitle">—</div>
+          <p id="startDescription" class="start-description">—</p>
+          <ul id="startBullets" class="start-bullets"></ul>
+          <button id="btnStart" class="btn btn--primary btn--large">—</button>
+        </div>
+      </section>
+
+      <!-- ================= QUIZ SCREEN ================= -->
+      <section id="screen-quiz" class="screen" hidden>
+        <header class="quiz-header">
+          <div class="progress-track">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+          <div class="quiz-header__row">
+            <div class="level-badge" id="levelBadge">A1</div>
+            <div class="muted" id="questionOfLabel">—</div>
+            <div class="lang-switch lang-switch--small" role="group" aria-label="Interface language">
+              <button class="lang-btn" data-lang="ru">RU</button>
+              <button class="lang-btn" data-lang="en">EN</button>
+            </div>
+          </div>
+        </header>
+
+        <div class="quiz-card">
+          <div class="topic-row">
+            <span class="pill" id="topicPill">—</span>
+            <span class="type-label" id="typeLabel">—</span>
+          </div>
+
+          <div id="passageBlock" class="passage-block" hidden>
+            <p id="passageText"></p>
+          </div>
+
+          <h2 id="questionText" class="question-text">—</h2>
+
+          <!-- choice / fill / reading / conjugate -->
+          <div id="optionsBlock" class="options-block" hidden></div>
+
+          <!-- match (word-translation) -->
+          <div id="matchBlock" class="match-block" hidden>
+            <div id="matchRows" class="match-rows"></div>
+            <button id="btnCheckMatch" class="btn btn--primary">—</button>
+          </div>
+
+          <div id="feedbackBlock" class="feedback-block" hidden>
+            <div id="feedbackText" class="feedback-text"></div>
+          </div>
+
+          <div class="quiz-card__footer">
+            <button id="btnNext" class="btn btn--primary" disabled>—</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= RESULT SCREEN ================= -->
+      <section id="screen-result" class="screen" hidden>
+        <div class="result-card">
+          <h1 id="resultTitle" class="result-title">—</h1>
+
+          <div class="result-level" id="resultLevel">
+            <span id="resultLevelPrefix" class="muted"></span>
+            <span id="resultLevelValue" class="result-level__value">—</span>
+          </div>
+
+          <div id="stoppedNotice" class="stopped-notice" hidden></div>
+
+          <h3 id="breakdownTitle" class="result-subtitle">—</h3>
+          <div id="breakdownList" class="breakdown-list"></div>
+
+          <h3 id="recommendationsTitle" class="result-subtitle">—</h3>
+          <p id="recommendationsText" class="recommendations-text">—</p>
+
+          <button id="btnRestart" class="btn btn--primary btn--large">—</button>
+        </div>
+      </section>
+    </div>
+
+    <script src="./src/data.js"></script>
+    <script src="./src/app.js"></script>
+  </body>
+</html>

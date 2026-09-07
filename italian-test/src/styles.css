@@ -112,6 +112,10 @@ body {
   align-items: center;
 }
 
+.screen[hidden] {
+  display: none;
+}
+
 /* -------- start screen -------- */
 .start-card {
   width: 100%;

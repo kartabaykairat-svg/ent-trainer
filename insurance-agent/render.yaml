@@ -1,0 +1,37 @@
+# Render Blueprint — deploys this whole app (frontend + backend, one
+# container, one URL) from the repo with almost no manual configuration.
+# See ../README.md "Деплой на Render" for the exact click-by-click steps.
+#
+# Free tier notes (honest limitations, read before relying on this for
+# real client data):
+#   * No persistent disk on the free plan - the SQLite database and any
+#     uploaded/generated files are wiped on every redeploy (they DO
+#     survive normal restarts/idle-sleep, just not a new deploy).
+#   * The free instance spins down after 15 minutes of inactivity; the
+#     first request after that takes ~30-60s to wake back up.
+#   * For real production use: upgrade to a paid instance with a
+#     persistent disk mounted at /app/storage, and point DATABASE_URL at
+#     a managed Postgres instead of SQLite.
+
+services:
+  - type: web
+    name: insurance-agent
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FIELD_ENCRYPTION_KEY
+        generateValue: true
+      - key: SEED_MANAGER_USERNAME
+        value: manager
+      - key: SEED_MANAGER_PASSWORD
+        sync: false
+      - key: DATABASE_URL
+        value: sqlite:////app/storage/app.db
+      - key: STORAGE_DIR
+        value: /app/storage
+      - key: CORS_ORIGINS
+        value: ""

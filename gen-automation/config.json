@@ -1,0 +1,22 @@
+{
+  "url": "https://CHANGE-ME.example.com/generate",
+  "profile_dir": "./browser-profile",
+  "prompts_file": "prompts.txt",
+  "output_dir": "./output",
+  "log_file": "./run.log",
+  "state_file": "./done.json",
+
+  "pre_checks": [
+    {"name": "Unlimited включён", "selector": "CSS-ТУМБЛЕРА-UNLIMITED", "expect": "checked"},
+    {"name": "Разрешение 2K", "selector": "CSS-ВЫБРАННОГО-РАЗРЕШЕНИЯ", "expect": "text", "value": "2K"},
+    {"name": "Параллельных генераций: 4", "selector": "CSS-СЧЁТЧИКА", "expect": "text", "value": "4"}
+  ],
+
+  "prompt_input": "CSS-ПОЛЯ-ПРОМПТА",
+  "submit_button": "CSS-КНОПКИ-GENERATE",
+  "result_selector": "CSS-ГОТОВОГО-РЕЗУЛЬТАТА img",
+  "result_attr": "src",
+  "timeout_sec": 600,
+  "delay_between_sec": 3,
+  "max_retries": 2
+}

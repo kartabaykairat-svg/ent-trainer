@@ -55,10 +55,23 @@
           <div><h3 data-i18n="contact.hours"></h3><p data-i18n-html="contact.hoursV"></p></div>
         </aside>
       </div>
-      <div class="map">
-        <iframe loading="lazy" data-i18n-title="contact.map" title="Map" referrerpolicy="no-referrer"
-          src="https://www.openstreetmap.org/export/embed.html?bbox=-0.1330%2C51.4970%2C-0.1160%2C51.5045&amp;layer=mapnik"></iframe>
-        <div class="map__pin" aria-hidden="true"><b data-i18n="contact.pin"></b><i></i></div>
+      <div class="map map--static">
+        <svg viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid slice" role="img" data-i18n-aria="contact.map" aria-label="Map">
+          <rect width="1200" height="520" fill="#0B2A6F"/>
+          <g stroke="#ffffff" stroke-opacity=".14" stroke-width="2" fill="none">
+            <path d="M0 120 L520 140 L760 90 L1200 110"/><path d="M0 300 L430 280 L560 330"/><path d="M180 0 L240 260 L210 520"/>
+            <path d="M420 0 L470 250 L455 520"/><path d="M0 420 L400 400"/><path d="M300 180 L520 200"/><path d="M90 220 L320 240"/>
+          </g>
+          <path d="M760 0 C700 120 700 200 740 270 C790 360 900 400 1200 380 L1200 470 C880 490 740 440 670 330 C620 250 620 120 680 0 Z" fill="#1F4FB5"/>
+          <path d="M520 250 L700 262" stroke="#ffffff" stroke-opacity=".5" stroke-width="5"/>
+          <rect x="560" y="178" width="70" height="52" fill="none" stroke="#ffffff" stroke-opacity=".45"/>
+          <g fill="#ffffff" fill-opacity=".55" font-family="Inter, Arial, sans-serif" font-size="13" letter-spacing="3">
+            <text x="860" y="430">RIVER THAMES</text><text x="470" y="300">WESTMINSTER BRIDGE</text><text x="250" y="110">ST JAMES'S PARK</text><text x="300" y="380">WESTMINSTER</text>
+          </g>
+          <circle cx="600" cy="240" r="7" fill="#D62828"/>
+        </svg>
+        <div class="map__pin" style="top:46%;left:50%" aria-hidden="true"><b data-i18n="contact.pin"></b><i></i></div>
+        <a class="map__open" href="https://www.openstreetmap.org/?mlat=51.5007&amp;mlon=-0.1246#map=16/51.5007/-0.1246" target="_blank" rel="noopener" data-i18n="contact.openMap"></a>
       </div>
     </section>
   </main>

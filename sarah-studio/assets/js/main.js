@@ -3,7 +3,9 @@
 
   var LANGS = [["en", "EN"], ["ru", "RU"], ["kk", "KZ"]];
   var D = window.DATA;
-  var page = document.body.dataset.page;
+  // SPA mode: all pages ship as <template data-page> in one file (artifact build).
+  var SPA = !!document.querySelector("template[data-page]");
+  var page = SPA ? routeFromHash().page : document.body.dataset.page;
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var finePointer = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
   var lang = detectLang();
@@ -21,7 +23,17 @@
   function t(key) { var d = window.I18N[lang]; return (d && d[key]) || window.I18N.en[key] || key; }
   function L(v) { return v && typeof v === "object" ? (v[lang] || v.en) : v; }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function routeFromHash() {
+    var h = location.hash.slice(1);
+    if (h.indexOf("p-") === 0) return { page: "project", slug: h.slice(2) };
+    return { page: document.querySelector('template[data-page="' + h + '"]') ? h : "home" };
+  }
   function u(path, extra) {
+    if (SPA) {
+      if (extra && extra.p) return "#p-" + extra.p;
+      var name = path.replace(".html", "");
+      return "#" + (name === "index" ? "home" : name);
+    }
     var p = new URLSearchParams(extra || {});
     p.set("lang", lang);
     return path + "?" + p.toString();
@@ -48,9 +60,11 @@
     if (next === lang) return;
     lang = next;
     try { localStorage.setItem("ss-lang", lang); } catch (e) {}
-    var p = new URLSearchParams(location.search);
-    p.set("lang", lang);
-    history.replaceState(null, "", location.pathname + "?" + p.toString() + location.hash);
+    if (!SPA) {
+      var p = new URLSearchParams(location.search);
+      p.set("lang", lang);
+      history.replaceState(null, "", location.pathname + "?" + p.toString() + location.hash);
+    }
     render();
   }
 
@@ -135,6 +149,7 @@
             '<p><a href="mailto:hello@sarahstudio.co.uk">hello@sarahstudio.co.uk</a><br><a href="tel:+442079460123">+44 20 7946 0123</a></p>' +
           "</div>" +
         "</div>" +
+        '<p class="demo-note">' + esc(t("demo.note")) + "</p>" +
         '<div class="footer__bottom"><span>' + esc(t("footer.rights")) + "</span><span>Westminster · London · SW1A</span></div>" +
       "</div>";
 
@@ -208,7 +223,7 @@
     work: function () {
       var grid = document.getElementById("projects");
       var cats = ["all", "film", "commercial", "music", "doc"];
-      var active = (location.hash || "").slice(1);
+      var active = SPA ? "all" : (location.hash || "").slice(1);
       if (cats.indexOf(active) < 0) active = "all";
       grid.innerHTML = D.projects.map(cardHTML).join("");
       bindCardVideos(grid);
@@ -222,7 +237,7 @@
         grid.querySelectorAll(".card").forEach(function (card) {
           card.classList.toggle("is-hidden", c !== "all" && card.dataset.cat !== c);
         });
-        history.replaceState(null, "", location.pathname + location.search + (c === "all" ? "" : "#" + c));
+        if (!SPA) history.replaceState(null, "", location.pathname + location.search + (c === "all" ? "" : "#" + c));
       }
       f.addEventListener("click", function (e) {
         var b = e.target.closest("button"); if (b) apply(b.dataset.filter);
@@ -231,7 +246,7 @@
     },
 
     project: function () {
-      var slug = new URLSearchParams(location.search).get("p");
+      var slug = SPA ? routeFromHash().slug : new URLSearchParams(location.search).get("p");
       var idx = Math.max(0, D.projects.findIndex(function (p) { return p.slug === slug; }));
       var p = D.projects[idx];
       var next = D.projects[(idx + 1) % D.projects.length];
@@ -353,9 +368,17 @@
         var body = t("form.name") + ": " + v("#f-name") + "\n" + t("form.email") + ": " + v("#f-email") + "\n" +
           t("form.type") + ": " + typeTxt + "\n" + t("form.budget") + ": " + budTxt + "\n\n" + v("#f-message");
         var status = form.querySelector(".form__status");
-        status.textContent = t("form.sent");
+        var mail = "mailto:hello@sarahstudio.co.uk?subject=" + encodeURIComponent("Project enquiry — " + v("#f-name")) + "&body=" + encodeURIComponent(body);
+        status.innerHTML = "<p>" + esc(t("form.sent")) + '</p><pre class="brief" tabindex="0"></pre>' +
+          '<p class="brief__actions"><button type="button" class="link" data-copy>' + esc(t("form.copy")) + '</button> <a class="link" href="' + mail + '">hello@sarahstudio.co.uk</a></p>';
+        status.querySelector(".brief").textContent = body;
+        status.querySelector("[data-copy]").addEventListener("click", function (ev) {
+          var btn = ev.currentTarget, pre = status.querySelector(".brief");
+          var done = function () { btn.textContent = t("form.copied"); };
+          var fallback = function () { var r = document.createRange(); r.selectNodeContents(pre); var sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); };
+          try { navigator.clipboard.writeText(body).then(done, fallback); } catch (err) { fallback(); }
+        });
         status.classList.add("is-visible");
-        location.href = "mailto:hello@sarahstudio.co.uk?subject=" + encodeURIComponent("Project enquiry — " + v("#f-name")) + "&body=" + encodeURIComponent(body);
       });
       form.querySelectorAll("input, textarea").forEach(function (el) {
         el.addEventListener("input", function () { el.closest(".field").classList.remove("is-invalid"); });
@@ -412,6 +435,7 @@
     if (tc && !reduceMotion) {
       var start = performance.now();
       (function tick(now) {
+        if (!tc.isConnected) return;
         var s = (now - start) / 1000, f = Math.floor((s % 1) * 24);
         var pad = function (n) { return String(Math.floor(n)).padStart(2, "0"); };
         tc.textContent = pad(s / 3600) + ":" + pad((s / 60) % 60) + ":" + pad(s % 60) + ":" + pad(f);
@@ -487,6 +511,26 @@
     if (pages[page]) pages[page]();
     observeReveals();
   }
+
+  function mountRoute() {
+    page = routeFromHash().page;
+    document.body.dataset.page = page;
+    var main = document.getElementById("main");
+    main.innerHTML = "";
+    main.appendChild(document.querySelector('template[data-page="' + page + '"]').content.cloneNode(true));
+    var m = document.getElementById("mobile-menu");
+    if (m) document.body.classList.remove("menu-open");
+    window.scrollTo(0, 0);
+  }
+  if (SPA) {
+    mountRoute();
+    window.addEventListener("hashchange", function () {
+      var h = location.hash.slice(1);
+      if (h.indexOf("p-") !== 0 && h && !document.querySelector('template[data-page="' + h + '"]')) return;
+      mountRoute(); render(); initHero(); updateHeader(); main_focus();
+    });
+  }
+  function main_focus() { var h = document.querySelector("#main h1"); if (h) { h.setAttribute("tabindex", "-1"); h.focus({ preventScroll: true }); } }
 
   render();
   initHero();

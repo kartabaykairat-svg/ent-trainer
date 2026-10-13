@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1500" viewBox="0 0 1200 1500" role="img" aria-labelledby="t201 d201">
+  <title id="t201">Стиль улиц Милана (плейсхолдер)</title>
+  <desc id="d201">Стильная итальянка средних лет в элегантном платье и солнечных очках идёт по узкой улице Милана, в руках бумажный пакет из бутика без видимых логотипов, естественная походка, стрит-фотография, боке</desc>
+  <defs>
+    <linearGradient id="g201" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e9c3a6"/>
+      <stop offset="55%" stop-color="#c17d6f"/>
+      <stop offset="100%" stop-color="#5c3948"/>
+    </linearGradient>
+    <filter id="n201">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="201" result="noise"/>
+      <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.05 0"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="1500" fill="url(#g201)"/>
+  <rect width="1200" height="1500" filter="url(#n201)"/>
+  <circle cx="600.0" cy="630.0" r="192.0" fill="#000000" opacity="0.08"/>
+  <text x="50%" y="630.0" font-size="192.0" text-anchor="middle" dominant-baseline="central" font-family="'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif">👗</text>
+  <text x="50%" y="930.0" font-size="54.0" text-anchor="middle" fill="#2b1d14" fill-opacity="0.72" font-family="Georgia, 'Times New Roman', serif" font-style="italic">Стиль улиц Милана</text>
+  <text x="50%" y="1484" font-size="12" letter-spacing="2" text-anchor="middle" fill="#2b1d14" fill-opacity="0.55" font-family="Arial, sans-serif">ФОТО — ЗАМЕНИТЬ</text>
+</svg>

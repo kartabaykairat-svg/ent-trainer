@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="800" viewBox="0 0 1100 800" role="img" aria-labelledby="t304 d304">
+  <title id="t304">Свободное место для фото (плейсхолдер)</title>
+  <desc id="d304">Дополнительный кадр по выбору — атмосфера центра, занятия, поездки в Италию</desc>
+  <defs>
+    <linearGradient id="g304" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f3e6cf"/>
+      <stop offset="55%" stop-color="#d8b482"/>
+      <stop offset="100%" stop-color="#8a5a34"/>
+    </linearGradient>
+    <filter id="n304">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="304" result="noise"/>
+      <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.05 0"/>
+    </filter>
+  </defs>
+  <rect width="1100" height="800" fill="url(#g304)"/>
+  <rect width="1100" height="800" filter="url(#n304)"/>
+  <circle cx="550.0" cy="336.0" r="128.0" fill="#000000" opacity="0.08"/>
+  <text x="50%" y="336.0" font-size="128.0" text-anchor="middle" dominant-baseline="central" font-family="'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif">📷</text>
+  <text x="50%" y="496.0" font-size="36.0" text-anchor="middle" fill="#2b1d14" fill-opacity="0.72" font-family="Georgia, 'Times New Roman', serif" font-style="italic">Свободное место для фото</text>
+  <text x="50%" y="784" font-size="12" letter-spacing="2" text-anchor="middle" fill="#2b1d14" fill-opacity="0.55" font-family="Arial, sans-serif">ФОТО — ЗАМЕНИТЬ</text>
+</svg>

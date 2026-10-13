@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="900" viewBox="0 0 900 900" role="img" aria-labelledby="t205 d205">
+  <title id="t205">Эспрессо и смех (плейсхолдер)</title>
+  <desc id="d205">Красивый итальянец в льняной рубашке смеётся за столиком уличного кафе с чашкой эспрессо, естественный свет, живая эмоция, а не постановка</desc>
+  <defs>
+    <linearGradient id="g205" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e9c3a6"/>
+      <stop offset="55%" stop-color="#c17d6f"/>
+      <stop offset="100%" stop-color="#5c3948"/>
+    </linearGradient>
+    <filter id="n205">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="205" result="noise"/>
+      <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.05 0"/>
+    </filter>
+  </defs>
+  <rect width="900" height="900" fill="url(#g205)"/>
+  <rect width="900" height="900" filter="url(#n205)"/>
+  <circle cx="450.0" cy="378.0" r="144.0" fill="#000000" opacity="0.08"/>
+  <text x="50%" y="378.0" font-size="144.0" text-anchor="middle" dominant-baseline="central" font-family="'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif">☕</text>
+  <text x="50%" y="558.0" font-size="40.5" text-anchor="middle" fill="#2b1d14" fill-opacity="0.72" font-family="Georgia, 'Times New Roman', serif" font-style="italic">Эспрессо и смех</text>
+  <text x="50%" y="884" font-size="12" letter-spacing="2" text-anchor="middle" fill="#2b1d14" fill-opacity="0.55" font-family="Arial, sans-serif">ФОТО — ЗАМЕНИТЬ</text>
+</svg>

@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+:root {
+  --color-ink: #0f172a;
+  --color-paper: #f8fafc;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}

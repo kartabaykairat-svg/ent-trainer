@@ -1,0 +1,87 @@
+{
+  "_readme": "Human-readable map of every merge field (docxtpl Jinja tag) inserted into templates/contract_template.docx and templates/poa_template.docx. Both files are produced from templates_source/*_original.docx by scripts/annotate_contract.py and scripts/annotate_poa.py - re-run those scripts (never hand-edit the *_template.docx files) if the source templates change. Every tag listed here fills a blank/underscore run or an empty hand-fill gap that already existed in the original template; no legal wording, clause numbers, headings or table structure was added, removed or reworded.",
+
+  "contract_template.docx": {
+    "top_level": {
+      "contract_number": "Номер договора (cover page 'серия 22 № ___', appendix 1/2 headers, 'Заключение' header)",
+      "contract_city": "Город заключения договора",
+      "contract_year": "Год заключения (row 0 short form)",
+      "contract_year_short": "Последние 2 цифры года (appendix header 'ХХж.')",
+      "contract_date_kz": "Дата на казахском для приложений (напр. '15 қыркүйек')",
+      "contract_date_day": "День заключения (2 цифры)",
+      "contract_date_month_ru": "Месяц заключения, родительный падеж, рус. (напр. 'сентября')",
+      "contract_date_year": "Год заключения, 4 цифры",
+      "second_insurer": "bool - есть ли второй страхователь; управляет всеми {% if second_insurer %} блоками для c2/schedule"
+    },
+    "c1 / c2 (страхователь 1 и 2, идентичная структура)": {
+      "full_name": "ФИО полностью",
+      "birth_date": "Дата рождения ДД.ММ.ГГГГ",
+      "iin": "ИИН, 12 цифр",
+      "residential_address": "Адрес проживания (полный)",
+      "doc_type_label_kz": "Тип документа на казахском (напр. 'жеке куәлігі')",
+      "doc_type_label_ru": "Тип документа на русском (напр. 'удостоверение личности')",
+      "doc_series": "Серия документа (если есть)",
+      "doc_number": "Номер документа",
+      "doc_issue_day": "День выдачи документа",
+      "doc_issue_month_kz": "Месяц выдачи, каз., с ведущим пробелом (напр. ' қаңтар')",
+      "doc_issue_month_ru": "Месяц выдачи, рус., родительный падеж, с ведущим пробелом (напр. ' января')",
+      "doc_issue_year": "Год выдачи документа",
+      "doc_issued_by": "Кем выдан документ (только RU колонка)",
+      "phone": "Телефон",
+      "email": "E-mail",
+      "bank_name": "Наименование банка",
+      "bank_account": "Номер банковского счета / IBAN"
+    },
+    "premium": {
+      "total / total_words": "Общая сумма страховой премии (цифрами / прописью)",
+      "other_org_c1 / _c2 (+_words)": "Выкупная сумма из другой страховой организации, по каждому страхователю",
+      "enpf_c1 / _c2 (+_words)": "Пенсионные накопления из ЕНПФ, по каждому страхователю",
+      "own_c1 / _c2 (+_words)": "Собственные средства, по каждому страхователю",
+      "premium_c1 / premium_c2": "Итоговая премия по каждому страхователю (для таблицы 3)"
+    },
+    "first_payment": {
+      "c1 / c2 (+_words)": "Первая ежемесячная страховая выплата, по каждому застрахованному"
+    },
+    "guarantee": {
+      "years": "Срок гарантированных выплат, лет",
+      "c1_from / c1_to, c2_from / c2_to": "Годы периода гарантированных выплат (короткая форма в осн. тексте)",
+      "c1_from_day/month/year, c1_to_day/month/year, c2_*": "Полные даты периода гарантированных выплат (таблица 3, строки 23-24)"
+    },
+    "death_benefit / death_benefit_words": "Сумма единовременной выплаты на погребение",
+    "beneficiary": {
+      "full_name, address, iin, document": "Получатель гарантированных выплат/выкупной суммы в случае смерти. Заполняется по желанию Страхователя - если full_name пусто, в договоре остаются оригинальные пустые места для нотариального/собственноручного заполнения"
+    },
+    "schedule": "Список объектов {date_c1, amount_c1, buyout_c1, date_c2, amount_c2, buyout_c2} - одна строка = один платёж, рендерится docxtpl-циклом по строкам таблицы 2 (Приложение 1, График страховых выплат). buyout_c2/date_c2/amount_c2 - пустые строки, если второго страхователя нет",
+    "summary (таблица 3, 'Информация о застрахованном')": {
+      "age_c1/_c2, age_c1_label/_c2_label": "Возраст на дату расчёта + слово 'год/года/лет'",
+      "gender_c1/_c2": "Пол",
+      "contract_basis": "Основания заключения договора (норма Соц. кодекса)",
+      "term_c1/_c2": "Срок осуществления страховых выплат",
+      "effective_rate": "Эффективная годовая процентная ставка доходности",
+      "indexation_rate": "Размер ставки индексации (по умолчанию 7%, см. calc_config.yaml)",
+      "cost_ratio_premium / cost_ratio_payment": "Расходы на ведение дела, % от премии / от выплаты",
+      "pv_factor / pv_factor_costs": "Фактор текущей стоимости (с гарантированными выплатами / с учётом расходов)"
+    },
+    "not_touched_on_purpose": [
+      "Actuary name/signature lines (para 61-62, 86-87) - filled by the insurer's actuary, not the manager",
+      "Insurer representative blanks in the preamble ('в лице ___', 'действующего на основании ___') and insurer signature block (table 1, col with 'САҚТАНДЫРУШЫ'/'СТРАХОВЩИК') - internal to Nomad Life, out of scope for a client-data agent",
+      "Physical signature lines for Страхователь(и) (table 1, rows 23-29) - real wet-ink signatures, never auto-filled",
+      "Article/clause numbering, headings, chapter titles, footer/legal boilerplate - unchanged verbatim"
+    ]
+  },
+
+  "poa_template.docx": {
+    "poa_city": "Город удостоверения доверенности",
+    "poa_date_day / poa_date_month_ru / poa_date_year": "Дата удостоверения доверенности",
+    "c1.full_name / birth_date / iin / registration_address": "Данные доверителя (клиента) - вставлены в те же пропуски, которые уже оставлял оригинальный шаблон между фиксированными словами ('Я, ... года рождения', 'ИИН', 'по адресу:')",
+    "representative.full_name / birth_date / iin / birth_place / address": "Данные представителя. По умолчанию (поля не переданы или пустые) рендерится ТОЧНО ТОТ ЖЕ представитель, что уже был в оригинальном шаблоне (УНДИЗОВА ФАГИЛЯМ МУХАМЕТЖАНОВНА со всеми её данными) - меняется только если менеджер включил режим 'Изменить представителя'",
+    "not_touched_on_purpose": [
+      "Notary's own blanks: notary's city, license number/date, registry number, fee, notary's signature - these belong to the notary at the moment of signing, never auto-filled",
+      "The physical signature line ('Подпись___') before the notary block",
+      "All legal/informed-consent wording (paras 5-8) - copied verbatim, never reworded",
+      "The one-year validity clause and the 'without the right to receive money or property' restriction (para 5) - preserved exactly as in the source"
+    ]
+  },
+
+  "data_contract": "Both templates are driven from the same client JSON object described in the project's AI-agent output schema (client, second insurer c2, insurance parameters, calculation results). See backend/app/schemas.py for the authoritative Pydantic model and backend/app/services/docx_fill.py for how that model is turned into the context dicts documented above."
+}

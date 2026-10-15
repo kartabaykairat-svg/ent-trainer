@@ -1,0 +1,31 @@
+# Pension-annuity calculation formulas.
+#
+# WHY THIS FILE EXISTS: the real actuarial payment formula used by an
+# insurer is a certified, regulator-approved calculation (mortality
+# tables, discount rates, expense loadings - see the reference workbook
+# in backend/templates_source/calculation_reference.xlsm, which is a full
+# actuarial engine far beyond what can or should be reverse-engineered
+# generically). The project brief is explicit that this app must NEVER
+# invent such a formula (section 9) - it must let a formula be configured
+# here, and refuse to auto-calculate anything if none is configured for
+# the selected id.
+#
+# Add a real formula by giving it an id below and implementing a matching
+# `calc_<id>(inputs) -> CalculationResult` function in
+# app/services/calculations.py - nothing else in the app needs to change.
+# Until then, the app will only ever calculate age / years-to-target
+# (pure calendar arithmetic, not an actuarial output) and will ask the
+# manager to enter the payment amounts manually or pick a formula here.
+
+formulas:
+  - id: manual_reference_estimate
+    label: "Справочная оценка (НЕ является сертифицированным актуарным расчётом)"
+    description: >
+      Иллюстративная линейная оценка ежемесячной выплаты
+      (премия / (годы_до_окончания * 12)), без учёта таблиц смертности,
+      нормы доходности и нагрузки на ведение дела. Используйте только как
+      отправную точку для последующей ручной корректировки актуарием;
+      никогда не подставляйте её в договор без проверки.
+    enabled: true
+
+active_formula: null  # set to a formula id above to allow /calculate to use it by default

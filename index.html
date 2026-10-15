@@ -3,6 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f4f6fb" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0d1120" media="(prefers-color-scheme: dark)" />
     <title>ЕНТ — тренажёр</title>
     <link rel="stylesheet" href="./src/styles.css" />
   </head>
@@ -65,11 +68,11 @@
 
           <section class="panel">
             <div class="panel__title">Подсказки</div>
-            <div class="muted">
-              - Можно выбирать тему сверху.<br />
-              - «Показать ответ» не влияет на статистику.<br />
-              - Данные лежат в <code>data/questions.json</code>.
-            </div>
+            <ul class="muted tips">
+              <li>Можно выбирать тему сверху.</li>
+              <li>«Показать ответ» не влияет на статистику.</li>
+              <li>Данные лежат в <code>data/questions.json</code>.</li>
+            </ul>
           </section>
         </aside>
       </main>

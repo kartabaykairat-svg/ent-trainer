@@ -6,6 +6,10 @@
 > [`italian-test/`](./italian-test) — тест на уровень итальянского языка
 > (A1–B2). Оно не связано с тренажёром ЕНТ, подробности — в
 > [`italian-test/README.md`](./italian-test/README.md).
+>
+> Ещё одно отдельное приложение — [`budget/`](./budget): «Семейный бюджет»
+> (общая таблица расходов для семьи). Инструкция — в
+> [`budget/README.md`](./budget/README.md).
 
 ## Запуск (рекомендуется)
 1. Откройте PowerShell в папке `ent-trainer`:

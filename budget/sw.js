@@ -1,7 +1,7 @@
 // Фоновый помощник: приложение открывается и без интернета.
 // Файлы приложения берутся из сети (чтобы обновления приходили сразу),
 // а если сети нет — из сохранённой копии. Данные Supabase не кэшируются.
-const CACHE = 'budget-v1';
+const CACHE = 'budget-v2';
 const SHELL = [
   './', './index.html', './styles.css', './app.js', './config.js', './manifest.webmanifest',
   './vendor/supabase.js', './icons/icon-192.png', './icons/icon-512.png',

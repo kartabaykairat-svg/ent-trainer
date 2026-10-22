@@ -764,6 +764,19 @@
     root.querySelectorAll('input[inputmode="numeric"]:not([type="password"])').forEach(liveFormat);
     if (onMount) onMount(root);
   }
+  // Своё окно подтверждения вместо системного confirm().
+  function askConfirm(text, okLabel) {
+    return new Promise((resolve) => {
+      let done = false;
+      openSheet('Подтвердите', `<p>${esc(text)}</p>
+        <div class="row-btns"><button class="btn primary" id="b-yes">${esc(okLabel || 'Да')}</button><button class="btn" id="b-no">Отмена</button></div>`, (root) => {
+        const finish = (v) => { if (done) return; done = true; closeSheet(); resolve(v); };
+        root.querySelector('#b-yes').addEventListener('click', () => finish(true));
+        root.querySelector('#b-no').addEventListener('click', () => finish(false));
+        root.addEventListener('click', (e) => { if (e.target === root || e.target.closest('[data-close]')) finish(false); });
+      });
+    });
+  }
   function closeSheet() {
     const s = document.getElementById('sheet');
     if (s) s.remove();
@@ -882,8 +895,8 @@
       });
       const del = q('#b-del');
       if (del) del.addEventListener('click', async () => {
-        if (!confirm('Удалить строку «' + d.name + '»? Её можно вернуть в «Ещё → История».')) return;
-        if (await saveItems([{ id: rowId, kind: 'row', month: state.month, data: it.data, deleted: true }])) closeSheet();
+        if (!await askConfirm('Удалить строку «' + d.name + '»? Её можно вернуть в «Ещё → История».', 'Удалить')) return;
+        await saveItems([{ id: rowId, kind: 'row', month: state.month, data: it.data, deleted: true }]);
       });
     });
   }
@@ -949,8 +962,8 @@
       });
       const del = q('#b-del');
       if (del) del.addEventListener('click', async () => {
-        if (!confirm('Удалить долг «' + d.name + '»?')) return;
-        if (await saveItems([{ id, kind: 'debt', data: it.data, deleted: true }])) closeSheet();
+        if (!await askConfirm('Удалить долг «' + d.name + '»?', 'Удалить')) return;
+        await saveItems([{ id, kind: 'debt', data: it.data, deleted: true }]);
       });
     });
   }
@@ -1157,7 +1170,7 @@
     }
     if (a === 'hist-undo') {
       const h = (state.history || []).find((x) => String(x.id) === t.dataset.hid);
-      if (!h || !confirm('Вернуть прежнее значение?\n' + describe(h))) return;
+      if (!h || !await askConfirm('Вернуть прежнее значение? ' + describe(h), 'Вернуть')) return;
       const ch = h.old_data
         ? { id: h.item_id, kind: h.kind, month: h.month, data: h.old_data, deleted: !!h.old_deleted }
         : { id: h.item_id, kind: h.kind, month: h.month, data: h.new_data || {}, deleted: true };

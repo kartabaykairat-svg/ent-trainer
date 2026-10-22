@@ -59,6 +59,9 @@ drop policy if exists "family history read" on public.history;
 create policy "family history read" on public.history
   for select to anon, authenticated using (true);
 
+grant select, insert, update on public.items to anon, authenticated;
+grant select on public.history to anon, authenticated;
+
 -- Изменения видны всем сразу (реальное время).
 do $$
 begin

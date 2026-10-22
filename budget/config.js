@@ -4,6 +4,6 @@
 // Пока поля пустые, приложение работает в демо-режиме:
 // данные хранятся только на этом устройстве.
 window.BUDGET_CONFIG = {
-  supabaseUrl: '',
+  supabaseUrl: 'https://fgtanwupljwpkbcnknpi.supabase.co',
   supabaseAnonKey: '',
 };

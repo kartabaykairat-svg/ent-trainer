@@ -322,3 +322,24 @@ label.chk input { width: 22px; height: 22px; }
 }
 .install-bar span { flex: 1; }
 .install-bar .x { width: 40px; height: 40px; background: transparent; }
+
+/* ---------- Голосовой ввод ---------- */
+.mic-fab {
+  position: fixed; z-index: 25; right: max(16px, env(safe-area-inset-right, 0px));
+  bottom: calc(var(--nav-h) + 16px + env(safe-area-inset-bottom, 0px));
+  width: 64px; height: 64px; border-radius: 50%; border: 0;
+  background: var(--accent); color: #fff; font-size: 28px;
+  box-shadow: 0 6px 18px rgba(31,111,235,.4);
+}
+.voice-top { display: flex; align-items: center; gap: 14px; margin: 4px 0 10px; }
+.mic-big {
+  flex: none; width: 72px; height: 72px; border-radius: 50%; border: 0;
+  background: var(--accent-soft); font-size: 32px;
+}
+.mic-big.on { background: #ffe1dd; animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(180,35,24,.35); } 50% { box-shadow: 0 0 0 12px rgba(180,35,24,0); } }
+.voice-status { margin: 0; font-size: 15px; font-weight: 600; }
+.voice-heard { background: var(--bg); border-radius: 10px; padding: 10px 12px; font-size: 14px; margin: 14px 0 12px; }
+@media (min-width: 900px) { .mic-fab { bottom: 24px; } }
+@media (prefers-reduced-motion: reduce) { .mic-big.on { animation: none; } }
+.st-btns.one { grid-template-columns: 1fr; }

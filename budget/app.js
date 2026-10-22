@@ -522,7 +522,8 @@
         <span><i class="sw closed"></i>только в строке Акмарал</span>
       </div>
       <p class="hint">Цветом закрашиваются Музыкалка, Англ. Медина, колледжи и Кредит Батый. В других колонках отметка — маленькая точка в углу. Синяя точка слева — фактический приход введён вручную.</p>
-      <div class="row-btns"><button class="btn" data-act="excel">⬇ Скачать в Excel</button></div>`;
+      <div class="row-btns"><button class="btn" data-act="excel">⬇ Скачать в Excel</button></div>
+      <button class="mic-fab" data-act="voice" aria-label="Голосовой ввод">🎤</button>`;
   }
 
   // ---------- Долги ----------
@@ -1040,6 +1041,244 @@
     });
   }
 
+  // ================= Голосовой ввод =================
+  // Человек говорит фразу («квартира 200 тысяч Bus Logistic оплачено»),
+  // приложение находит строку, колонку, сумму и отметку и просит подтвердить.
+  const NUM_WORDS = {
+    ноль: 0, один: 1, одна: 1, одну: 1, два: 2, две: 2, три: 3, четыре: 4, пять: 5, шесть: 6, семь: 7, восемь: 8, девять: 9,
+    десять: 10, одиннадцать: 11, двенадцать: 12, тринадцать: 13, четырнадцать: 14, пятнадцать: 15, шестнадцать: 16,
+    семнадцать: 17, восемнадцать: 18, девятнадцать: 19, двадцать: 20, тридцать: 30, сорок: 40, пятьдесят: 50,
+    шестьдесят: 60, семьдесят: 70, восемьдесят: 80, девяносто: 90, сто: 100, двести: 200, триста: 300, четыреста: 400,
+    пятьсот: 500, шестьсот: 600, семьсот: 700, восемьсот: 800, девятьсот: 900, полтора: 1.5, полторы: 1.5,
+  };
+  const COL_WORDS = {
+    kvartira: ['квартир'], ofis: ['офис'], telefon: ['телефон', 'теле2', 'tele2', 'теле 2'],
+    komm: ['коммун', 'комм'], komm_alisa: ['комм алис', 'коммуналка алис', 'алис'],
+    kredity: ['кредит', 'фридом', 'freedom'], myaso: ['мясо'], produkty: ['продукт'],
+    mylo: ['мыло', 'мойк'], taksi: ['такси', 'дорог'], muzyka: ['музык'],
+    angl: ['англ', 'английск'], lulua: ['лулу'], batyi: ['колледж батый', 'батый колледж', 'батый', 'батыя'],
+    kredit_batyi: ['кредит батый', 'кредит батыя', 'батый кредит'], nalogi: ['налог'], raznoe: ['разное', 'разные'],
+    lekarstva: ['лекарств'], otdyh: ['отдых'], dolg_zh: ['жалалдин'], dolg_ai: ['айсулу'], dolg_sab: ['сабыржан'],
+    azheke: ['ажеке', 'ажека'], reklama: ['реклам'],
+  };
+  const ROW_WORDS = { bus: ['bus', 'бас', 'басс', 'логист'], tep: ['теплиц'], euro: ['евробетон', 'евро бетон', 'бетон'], akm: ['акмарал'] };
+  const MONTH_STEMS = ['январ', 'феврал', 'март', 'апрел', 'ма[йяе]', 'июн', 'июл', 'август', 'сентябр', 'октябр', 'ноябр', 'декабр'];
+
+  const norm = (s) => ' ' + String(s || '').toLowerCase().replace(/ё/g, 'е').replace(/[^0-9a-zа-я]+/g, ' ').trim() + ' ';
+  const stems = (title) => norm(title).trim().split(' ').filter((w) => w.length >= 3).map((w) => (w.length > 5 ? w.slice(0, w.length - 2) : w));
+
+  function speechNumbers(text) {
+    const t = String(text).toLowerCase().replace(/ё/g, 'е')
+      .replace(/(\d)[\s  ]+(?=\d{3}(?!\d))/g, '$1').replace(/(\d),(\d)/g, '$1.$2');
+    const tokens = t.split(/[^0-9a-zа-я.]+/).filter(Boolean);
+    const out = [];
+    let total = 0; let cur = 0; let has = false; let lastDigit = false;
+    const flush = () => { if (has) out.push(Math.round(total + cur)); total = 0; cur = 0; has = false; lastDigit = false; };
+    for (const tok of tokens) {
+      if (/^\d+(\.\d+)?$/.test(tok)) {
+        if (has && lastDigit) flush();
+        cur += parseFloat(tok); has = true; lastDigit = true;
+      } else if (NUM_WORDS[tok] != null) {
+        if (has && lastDigit) flush();
+        cur += NUM_WORDS[tok]; has = true; lastDigit = false;
+      } else if (/^(тыс|тысяч|тысяча|тысячи|тыщ|тыщи|тыщу|тысячу|к)$/.test(tok)) {
+        total += (has ? cur : 1) * 1000; cur = 0; has = true; lastDigit = false;
+      } else if (/^(миллион|миллиона|миллионов|млн)$/.test(tok)) {
+        total += (has ? cur : 1) * 1000000; cur = 0; has = true; lastDigit = false;
+      } else if (/^(тенге|тг)$/.test(tok)) {
+        // «тенге» после суммы ничего не меняет
+      } else flush();
+    }
+    flush();
+    // «8 из 32 тысяч» — маленькое число рядом с тысячами тоже в тысячах.
+    if (out.some((n) => n >= 1000)) return out.map((n) => (n > 0 && n < 1000 ? n * 1000 : n));
+    return out;
+  }
+
+  function bestMatch(text, candidates) {
+    let best = null; let score = 0; let tie = false;
+    for (const c of candidates) {
+      let s = 0;
+      for (const w of c.words) if (text.includes(' ' + w) && w.length > s) s = w.length;
+      if (s > score) { best = c; score = s; tie = false; } else if (s && s === score && c !== best) tie = true;
+    }
+    return tie ? null : best;
+  }
+
+  function parseSpeech(text) {
+    const t = norm(text);
+    // Месяц
+    let ym = state.month;
+    const ms = months();
+    MONTH_STEMS.forEach((st, i) => {
+      if (new RegExp(' ' + st).test(t)) {
+        const found = ms.filter((m) => Number(m.split('-')[1]) === i + 1).pop();
+        if (found) ym = found;
+      }
+    });
+    const M = model(ym);
+    const col = bestMatch(t, M.cols.map((c) => ({ key: c.key, c, words: (COL_WORDS[c.key] || []).concat(stems(c.title)) })));
+    const row = bestMatch(t, M.rows.map((r) => ({ id: r.id, r, words: (ROW_WORDS[r.id.slice(r.id.lastIndexOf('|') + 1)] || []).concat(stems(r.name)) })));
+    let rowId = row ? row.id : null;
+    const c = col ? col.c : null;
+    if (c && !rowId) {
+      if (c.akm) { const a = M.rows.find((r) => r.akmaral); rowId = a ? a.id : null; } else {
+        const filled = M.rows.filter((r) => r.cells[c.key] && r.cells[c.key].v);
+        if (filled.length === 1) rowId = filled[0].id;
+      }
+    }
+    let st = null;
+    if (/ не (оплач|заплат|оплат)/.test(t)) st = 'unpaid';
+    else if (/ (частич|половин)/.test(t)) st = 'partial';
+    else if (/ (оплач|заплат|оплатил|оплатила|оплатили)/.test(t)) st = 'paid';
+    const nums = speechNumbers(text);
+    let v = null; let paid = null;
+    if (st === 'partial') {
+      if (nums.length >= 2) { v = Math.max(...nums); paid = Math.min(...nums); } else if (nums.length === 1) paid = nums[0];
+    } else if (nums.length) v = nums[0];
+    const add = / (плюс|добав|прибав|еще|ещё)/.test(t);
+    return { ym, colKey: c ? c.key : null, rowId, v, st, paid, add };
+  }
+
+  function openVoice() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let rec = null;
+    openSheet('Голосовой ввод', `
+      <div class="voice-top">
+        <button class="mic-big" id="v-mic" aria-label="Говорить">🎤</button>
+        <p class="voice-status" id="v-status">${SR ? 'Нажмите на микрофон и скажите, что записать' : 'Нажмите в поле ниже и продиктуйте с клавиатуры (значок 🎤 на клавиатуре)'}</p>
+      </div>
+      <p class="hint">Например: «квартира 200 тысяч Bus Logistic оплачено», «Музыкалка частично 8 тысяч из 32 тысяч», «продукты плюс 15 тысяч».</p>
+      <label class="f">Что записать<input id="v-text" placeholder="скажите или напишите"></label>
+      <button class="btn block" id="v-parse">Разобрать</button>
+      <div id="v-result"></div>`, (root) => {
+      const q = (s) => root.querySelector(s);
+      if (!SR) q('#v-mic').hidden = true;
+      const showResult = (text) => {
+        if (!text.trim()) return;
+        if (rec) { rec.onend = null; rec.onerror = null; try { rec.abort(); } catch (e) { /* уже остановлен */ } }
+        q('#v-mic').classList.remove('on');
+        q('#v-status').textContent = 'Проверьте и нажмите «Сохранить»';
+        q('#v-text').value = text;
+        renderVoiceResult(q('#v-result'), parseSpeech(text), text);
+        q('#v-result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      };
+      q('#v-parse').addEventListener('click', () => showResult(q('#v-text').value));
+      q('#v-text').addEventListener('keydown', (e) => { if (e.key === 'Enter') showResult(q('#v-text').value); });
+      const listen = () => {
+        if (!SR) return;
+        if (rec) { try { rec.stop(); } catch (e) { /* уже остановлен */ } }
+        rec = new SR();
+        rec.lang = 'ru-RU';
+        rec.interimResults = true;
+        rec.maxAlternatives = 1;
+        let finalText = '';
+        q('#v-mic').classList.add('on');
+        q('#v-status').textContent = 'Слушаю… говорите';
+        rec.onresult = (e) => {
+          let s = '';
+          for (let i = 0; i < e.results.length; i++) s += e.results[i][0].transcript;
+          q('#v-text').value = s;
+          if (e.results[e.results.length - 1].isFinal) finalText = s;
+        };
+        rec.onerror = (e) => {
+          const msg = {
+            'not-allowed': 'Нет доступа к микрофону. Разрешите его в настройках браузера или продиктуйте с клавиатуры.',
+            'service-not-allowed': 'Микрофон недоступен. Продиктуйте с клавиатуры (значок 🎤).',
+            'no-speech': 'Ничего не услышал. Нажмите на микрофон и попробуйте ещё раз.',
+            network: 'Для распознавания речи нужен интернет.',
+          }[e.error] || 'Не получилось распознать. Попробуйте ещё раз.';
+          q('#v-status').textContent = msg;
+        };
+        rec.onend = () => {
+          q('#v-mic').classList.remove('on');
+          const text = finalText || q('#v-text').value;
+          if (text.trim()) { q('#v-status').textContent = 'Проверьте и нажмите «Сохранить»'; showResult(text); }
+        };
+        try { rec.start(); } catch (e) { q('#v-status').textContent = 'Не получилось включить микрофон. Попробуйте ещё раз.'; }
+      };
+      q('#v-mic').addEventListener('click', listen);
+      listen();
+    });
+  }
+
+  function renderVoiceResult(box, p, text) {
+    const M = model(p.ym);
+    const opt = (val, label, sel) => `<option value="${esc(val)}" ${sel ? 'selected' : ''}>${esc(label)}</option>`;
+    let st = p.st || '';
+    box.innerHTML = `
+      <div class="voice-heard">Услышал: «${esc(text)}»</div>
+      ${!p.colKey || !p.rowId ? '<p class="err-text" style="margin:0 0 10px">Не всё понял — выберите, куда записать.</p>' : ''}
+      <label class="f">Месяц<select id="v-ym">${months().map((m) => opt(m, ymTitle(m, true), m === p.ym)).join('')}</select></label>
+      <label class="f">Из какой строки платим<select id="v-row">${opt('', '— выберите —', !p.rowId)}${M.rows.map((r) => opt(r.id, r.name, r.id === p.rowId)).join('')}</select></label>
+      <label class="f">Колонка<select id="v-col">${opt('', '— выберите —', !p.colKey)}${M.cols.map((c) => opt(c.key, c.title, c.key === p.colKey)).join('')}</select></label>
+      <label class="f">Сумма, ₸<input id="v-sum" inputmode="numeric" value="${p.v ? fmt(p.v) : ''}" placeholder="оставьте пустым, чтобы не менять"></label>
+      <div id="v-mode"></div>
+      <div class="small muted">Отметка оплаты</div>
+      <div class="st-btns">
+        <button class="st-btn paid" data-st="paid">Оплачено</button>
+        <button class="st-btn unpaid" data-st="unpaid">Не оплачено</button>
+        <button class="st-btn partial" data-st="partial">Частично</button>
+        <button class="st-btn none" data-st="">Без отметки</button>
+      </div>
+      <div id="v-pbox" hidden><label class="f">Сколько уже оплачено, ₸<input id="v-paid" inputmode="numeric" value="${p.paid ? fmt(p.paid) : ''}"></label></div>
+      <p class="err-text" id="v-err" hidden></p>
+      <button class="btn primary block" id="v-save">Сохранить</button>`;
+    const q = (s) => box.querySelector(s);
+    box.querySelectorAll('input[inputmode="numeric"]').forEach(liveFormat);
+    let add = p.add;
+    const existing = () => {
+      const it = items.get(cellId(q('#v-row').value, q('#v-col').value));
+      return it ? it.data : null;
+    };
+    const sync = () => {
+      const ex = existing();
+      const n = parseNum(q('#v-sum').value);
+      const mode = q('#v-mode');
+      if (ex && ex.v && n) {
+        mode.innerHTML = `<div class="st-btns one">
+          <button class="st-btn none ${!add ? 'on' : ''}" data-mode="set">Заменить (было ${fmt(ex.v)})</button>
+          <button class="st-btn none ${add ? 'on' : ''}" data-mode="add">Прибавить: ${fmt(ex.v + n)}</button></div>`;
+        mode.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => { add = b.dataset.mode === 'add'; sync(); }));
+      } else mode.innerHTML = '';
+      box.querySelectorAll('[data-st]').forEach((b) => b.classList.toggle('on', b.dataset.st === st));
+      q('#v-pbox').hidden = st !== 'partial';
+    };
+    box.querySelectorAll('[data-st]').forEach((b) => b.addEventListener('click', () => { st = b.dataset.st; sync(); }));
+    q('#v-ym').addEventListener('change', () => renderVoiceResult(box, Object.assign({}, p, { ym: q('#v-ym').value, rowId: null }), text));
+    ['#v-row', '#v-col', '#v-sum'].forEach((s) => q(s).addEventListener(s === '#v-sum' ? 'input' : 'change', sync));
+    sync();
+    q('#v-save').addEventListener('click', async () => {
+      const err = (m) => { const e = q('#v-err'); e.textContent = m; e.hidden = false; };
+      const ym = q('#v-ym').value; const rowId = q('#v-row').value; const key = q('#v-col').value;
+      if (!rowId || !key) return err('Выберите строку и колонку');
+      const Mm = model(ym);
+      const r = Mm.rows.find((x) => x.id === rowId); const c = Mm.cols.find((x) => x.key === key);
+      if (c.akm && !r.akmaral) return err('Колонка «' + c.title + '» заполняется только в строке Акмарал');
+      const ex = existing() || {};
+      const n = parseNum(q('#v-sum').value);
+      if (isNaN(n) || (n != null && n < 0)) return err('Введите сумму цифрами, например 25 000');
+      const data = Object.assign({}, ex);
+      if (n != null) data.v = (add && ex.v ? ex.v : 0) + n;
+      data.v = data.v || 0;
+      if (st) data.st = st; else delete data.st;
+      delete data.paid;
+      if (st === 'partial') {
+        const pd = parseNum(q('#v-paid').value);
+        if (pd == null || isNaN(pd) || pd <= 0) return err('Укажите, сколько уже оплачено');
+        if (pd > data.v) return err('Оплачено не может быть больше суммы');
+        data.paid = pd;
+      }
+      if (!data.v && !st) return err('Скажите сумму или отметку оплаты');
+      const ok = await saveItems([{ id: cellId(rowId, key), kind: 'cell', month: ym, data }]);
+      if (ok) {
+        closeSheet();
+        state.month = ym; state.tab = 'table'; render();
+        toast('Записано: ' + r.name + ' · ' + c.title + ' — ' + money(data.v));
+      }
+    });
+  }
+
   // ================= Скачать в Excel =================
   async function exportExcel() {
     const ym = state.month;
@@ -1219,6 +1458,7 @@
     if (a === 'newrow') { editRow(null); return; }
     if (a === 'col') { editCol(t.dataset.col); return; }
     if (a === 'newmonth') { newMonthDialog(); return; }
+    if (a === 'voice') { openVoice(); return; }
     if (a === 'debt') { editDebt(t.dataset.id); return; }
     if (a === 'debt-add') { editDebt(null); return; }
     if (a === 'member-add') { memberDialog(false); return; }

@@ -314,3 +314,11 @@ label.chk input { width: 22px; height: 22px; }
   .sheet { border-radius: 18px; }
   .banner { margin: 12px 24px 0; }
 }
+
+/* ---------- Установка на главный экран ---------- */
+.install-bar {
+  display: flex; align-items: center; gap: 8px; margin: 0 0 10px;
+  background: var(--accent-soft); border-radius: 12px; padding: 8px 8px 8px 12px; font-size: 14px;
+}
+.install-bar span { flex: 1; }
+.install-bar .x { width: 40px; height: 40px; background: transparent; }

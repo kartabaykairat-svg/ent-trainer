@@ -190,6 +190,7 @@
     loaded: false,
     flash: new Set(),
     loginPick: null,
+    installPrompt: null,
     history: null,
   };
 
@@ -504,6 +505,7 @@
     const tLeft = foot('осталось оплатить', 'pay', (k, isCol) => isCol ? td(M.colTot[k] - M.colPaid[k]) : '<td></td>', '');
 
     return `
+      ${installBanner()}
       ${lastChangeLine(state.month)}
       <p class="hint">Нажмите на ячейку, чтобы ввести сумму или отметить оплату. Таблица листается вбок. Суммы в тенге (₸).</p>
       <div class="tbl-wrap">
@@ -647,6 +649,7 @@
         <h3>Вы вошли как ${esc(state.user.name)}</h3>
         <div class="row-btns"><button class="btn" data-act="pin-change">Сменить PIN</button><button class="btn" data-act="logout">Выйти</button></div>
       </div>
+      ${renderInstallCard()}
       <div class="card">
         <h3>Участники</h3>
         ${members.map((m) => `<div class="list-item"><div class="t">${esc(m.data.name)}</div><div class="d">${m.id === state.user.id ? 'это вы' : ''}</div></div>`).join('')}
@@ -668,6 +671,24 @@
         <p class="muted small">${USE_CLOUD ? (isOnline() ? 'Общая база подключена. Изменения видны всем сразу.' : 'Нет связи с общей базой.') : 'Демо-режим: данные только на этом устройстве. Подключите Supabase — инструкция в файле budget/README.md.'}</p>
       </div>
     </div>`;
+  }
+
+  const isStandalone = () => (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  const isIos = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  function renderInstallCard() {
+    if (isStandalone()) return '<div class="card"><h3>Приложение на телефоне</h3><p class="muted small">Приложение установлено на главный экран.</p></div>';
+    let how;
+    if (state.installPrompt) how = '<button class="btn primary block" data-act="install">📲 Установить на главный экран</button>';
+    else if (isIos()) how = '<p class="small">В Safari нажмите кнопку «Поделиться» <b>⬆</b> внизу экрана, затем «На экран „Домой“» и «Добавить».</p>';
+    else how = '<p class="small">В Chrome нажмите меню <b>⋮</b> справа вверху, затем «Установить приложение» или «Добавить на главный экран».</p>';
+    return `<div class="card"><h3>Установить на телефон</h3><p class="hint">Иконка «Бюджет» появится на главном экране, приложение откроется без адресной строки.</p>${how}</div>`;
+  }
+
+  function installBanner() {
+    if (!state.installPrompt || isStandalone() || lsGet('budget-install-hide', false)) return '';
+    return `<div class="install-bar"><span>Установить «Бюджет» на главный экран?</span>
+      <button class="btn small-btn primary" data-act="install">Установить</button><button class="x" data-act="install-hide" aria-label="Скрыть">✕</button></div>`;
   }
 
   function cellText(d) {
@@ -1161,6 +1182,16 @@
     if (a === 'tab') { state.tab = t.dataset.tab; window.scrollTo(0, 0); render(); return; }
     if (a === 'month') { state.month = t.dataset.m; render(); return; }
     if (a === 'reload') { location.reload(); return; }
+    if (a === 'install-hide') { lsSet('budget-install-hide', true); render(); return; }
+    if (a === 'install') {
+      const p = state.installPrompt;
+      if (!p) return;
+      p.prompt();
+      try { const r = await p.userChoice; if (r && r.outcome === 'accepted') toast('Готово! Ищите иконку «Бюджет» на главном экране'); } catch (err) { /* окно закрыли */ }
+      state.installPrompt = null;
+      render();
+      return;
+    }
     if (a === 'pick') { state.loginPick = t.dataset.id; render(); return; }
     if (a === 'logout') { state.user = null; state.loginPick = null; lsSet(USER_KEY, null); render(); return; }
     if (a === 'excel') { exportExcel().catch((err) => { console.error(err); toast('Не получилось подготовить файл. Попробуйте ещё раз.', true); }); return; }
@@ -1301,6 +1332,13 @@
     window.addEventListener('online', () => { refresh(); });
     window.addEventListener('offline', () => scheduleRender());
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && USE_CLOUD) refresh(); });
+  }
+
+  // Установка на главный экран.
+  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); state.installPrompt = e; scheduleRender(); });
+  window.addEventListener('appinstalled', () => { state.installPrompt = null; scheduleRender(); });
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    navigator.serviceWorker.register('./sw.js').catch(() => { /* без офлайн-режима приложение тоже работает */ });
   }
 
   start();

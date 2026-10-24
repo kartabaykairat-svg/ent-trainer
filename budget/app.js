@@ -17,6 +17,7 @@
   const BASE_COLS = [
     { key: 'kvartira', title: 'квартира' },
     { key: 'ofis', title: 'офис' },
+    { key: 'depozit', title: 'депозит' },
     { key: 'telefon', title: 'телефон', group: 'green', hint: 'Tele2' },
     { key: 'komm', title: 'комм', group: 'green', hint: 'коммуналка' },
     { key: 'komm_alisa', title: 'комм. Алиса', group: 'green' },
@@ -33,11 +34,11 @@
     { key: 'nalogi', title: 'налоги', hint: 'Акмарал' },
     { key: 'raznoe', title: 'разное' },
     { key: 'lekarstva', title: 'лекарства' },
-    { key: 'otdyh', title: 'отдых', akm: true, hint: 'вводится только в строке Акмарал' },
+    { key: 'otdyh', title: 'отдых' },
     { key: 'dolg_zh', title: 'Долг Жалалдин', group: 'orange' },
     { key: 'dolg_ai', title: 'Долг Айсулу', group: 'orange' },
     { key: 'dolg_sab', title: 'Долг Сабыржан', group: 'orange' },
-    { key: 'azheke', title: 'Отправить Ажеке', group: 'yellow', akm: true, hint: 'вводится только в строке Акмарал' },
+    { key: 'azheke', title: 'Отправить Ажеке', group: 'yellow' },
     { key: 'reklama', title: 'реклама' },
   ];
 
@@ -306,7 +307,6 @@
       let exp = 0;
       const cells = {};
       cols.forEach((c) => {
-        if (c.akm && !r.akmaral) return;
         const it = items.get(cellId(r.id, c.key));
         if (!it) return;
         const d = it.data || {};
@@ -465,7 +465,6 @@
       h += `<td class="num ed" data-act="row" data-row="${esc(r.id)}">${fmtOpt(r.halyk)}</td>`;
       h += `<td class="num ed ${r.manual ? 'manual' : ''}" data-act="row" data-row="${esc(r.id)}" title="${r.manual ? 'введено вручную' : 'приход − халык'}">${(r.manual || r.fact) ? fmt(r.fact) : ''}</td>`;
       cols.forEach((c) => {
-        if (c.akm && !r.akmaral) { h += '<td class="num closed" data-act="closed"></td>'; return; }
         const d = r.cells[c.key];
         const id = cellId(r.id, c.key);
         let cls = 'num ed';
@@ -519,7 +518,6 @@
         <span><i class="sw paid"></i>оплачено</span>
         <span><i class="sw unpaid"></i>не оплачено</span>
         <span><i class="sw partial"></i>частично</span>
-        <span><i class="sw closed"></i>только в строке Акмарал</span>
       </div>
       <p class="hint">Цветом закрашиваются Музыкалка, Англ. Медина, колледжи и Кредит Батый. В других колонках отметка — маленькая точка в углу. Синяя точка слева — фактический приход введён вручную.</p>
       <div class="row-btns"><button class="btn" data-act="excel">⬇ Скачать в Excel</button></div>
@@ -1052,7 +1050,7 @@
     пятьсот: 500, шестьсот: 600, семьсот: 700, восемьсот: 800, девятьсот: 900, полтора: 1.5, полторы: 1.5,
   };
   const COL_WORDS = {
-    kvartira: ['квартир'], ofis: ['офис'], telefon: ['телефон', 'теле2', 'tele2', 'теле 2'],
+    kvartira: ['квартир'], ofis: ['офис'], depozit: ['депозит'], telefon: ['телефон', 'теле2', 'tele2', 'теле 2'],
     komm: ['коммун', 'комм'], komm_alisa: ['комм алис', 'коммуналка алис', 'алис'],
     kredity: ['кредит', 'фридом', 'freedom'], myaso: ['мясо'], produkty: ['продукт'],
     mylo: ['мыло', 'мойк'], taksi: ['такси', 'дорог'], muzyka: ['музык'],
@@ -1122,10 +1120,8 @@
     let rowId = row ? row.id : null;
     const c = col ? col.c : null;
     if (c && !rowId) {
-      if (c.akm) { const a = M.rows.find((r) => r.akmaral); rowId = a ? a.id : null; } else {
-        const filled = M.rows.filter((r) => r.cells[c.key] && r.cells[c.key].v);
-        if (filled.length === 1) rowId = filled[0].id;
-      }
+      const filled = M.rows.filter((r) => r.cells[c.key] && r.cells[c.key].v);
+      if (filled.length === 1) rowId = filled[0].id;
     }
     let st = null;
     if (/ не (оплач|заплат|оплат)/.test(t)) st = 'unpaid';
@@ -1254,7 +1250,6 @@
       if (!rowId || !key) return err('Выберите строку и колонку');
       const Mm = model(ym);
       const r = Mm.rows.find((x) => x.id === rowId); const c = Mm.cols.find((x) => x.key === key);
-      if (c.akm && !r.akmaral) return err('Колонка «' + c.title + '» заполняется только в строке Акмарал');
       const ex = existing() || {};
       const n = parseNum(q('#v-sum').value);
       if (isNaN(n) || (n != null && n < 0)) return err('Введите сумму цифрами, например 25 000');
@@ -1343,7 +1338,6 @@
         else if (r.income) row.getCell(4).value = { formula: `B${rn}-C${rn}`, result: r.fact };
         cols.forEach((c, i) => {
           const cell = row.getCell(firstExp + i);
-          if (c.akm && !r.akmaral) { cell.fill = fill('FFD9D9D9'); return; }
           const d = r.cells[c.key];
           if (!d) return;
           if (d.v) cell.value = d.v;
@@ -1351,8 +1345,6 @@
           if (d.st) cell.note = d.st === 'partial' ? `оплачено ${fmt(d.paidAmt)} из ${fmt(d.v)}, осталось ${fmt(d.v - d.paidAmt)}` : ST_NAME[d.st];
         });
         row.getCell(restCol).value = { formula: `D${rn}-SUM(${L(firstExp)}${rn}:${L(lastExp)}${rn})`, result: r.rest };
-      } else {
-        cols.forEach((c, i) => { if (c.akm) row.getCell(firstExp + i).fill = fill('FFD9D9D9'); });
       }
       rn++;
     });
@@ -1382,7 +1374,7 @@
     for (let c = 1; c <= restCol; c++) ws.getCell(totRow, c).fill = fill('FFF2F2F2');
 
     const lg = totRow + 4;
-    [['оплачено', SC.paid], ['не оплачено', SC.unpaid], ['частично', SC.partial], ['только в строке Акмарал', 'FFD9D9D9']].forEach(([t, color], i) => {
+    [['оплачено', SC.paid], ['не оплачено', SC.unpaid], ['частично', SC.partial]].forEach(([t, color], i) => {
       ws.getCell(lg + i, 1).fill = fill(color);
       ws.getCell(lg + i, 1).border = border;
       ws.getCell(lg + i, 2).value = t;
@@ -1452,7 +1444,6 @@
       return;
     }
     if (!state.user) return;
-    if (a === 'closed') { toast('Эта колонка заполняется только в строке Акмарал'); return; }
     if (a === 'cell') { editCell(t.dataset.row, t.dataset.col); return; }
     if (a === 'row') { editRow(t.dataset.row); return; }
     if (a === 'newrow') { editRow(null); return; }

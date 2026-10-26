@@ -497,6 +497,7 @@
             inner += `<small class="sub">ост. ${fmt(d.v - d.paidAmt)}</small>`;
           }
           if (d.it && d.it.updated_by && d.it.updated_by !== SEED_BY) title += (title ? '\n' : '') + d.it.updated_by + ', ' + fmtWhen(d.it.updated_at);
+          if (d.parts && d.parts.length) { inner += `<span class="parts-n">${d.parts.length}</span>`; title += (title ? '\n' : '') + d.parts.map((x) => (x.t || '—') + ': ' + fmt(x.v)).join('\n'); }
           if (d.files && d.files.length) { inner += '<span class="clip">📎</span>'; title += (title ? '\n' : '') + 'квитанций: ' + d.files.length; }
           if (state.flash.has(id)) cls += ' flash';
         }
@@ -847,6 +848,9 @@
     openSheet(r.name + ' · ' + c.title, `
       ${c.hint ? `<p class="hint">${esc(c.hint)}</p>` : ''}
       <label class="f">Сумма, ₸<input id="f-v" inputmode="numeric" value="${fmtOpt(d.v)}" placeholder="0"></label>
+      <div class="small muted">Из чего складывается</div>
+      <div class="parts" id="parts"></div>
+      <button class="btn block small-btn" id="b-part" style="margin:0 0 12px">＋ Добавить мелкую сумму</button>
       <div class="small muted">Отметка оплаты</div>
       <div class="st-btns">
         <button class="st-btn paid" data-st="paid">Оплачено</button>
@@ -864,6 +868,34 @@
       <div class="row-btns"><button class="btn primary" id="b-save">Сохранить</button>${it ? '<button class="btn danger" id="b-clear">Очистить</button>' : ''}</div>
       ${whoLine(it)}`, (root) => {
       const $v = root.querySelector('#f-v'); const $p = root.querySelector('#f-paid');
+      const $parts = root.querySelector('#parts');
+      const partRow = (pt) => {
+        const el = document.createElement('div');
+        el.className = 'part-row';
+        el.innerHTML = `<input class="p-t" placeholder="на что" value="${esc(pt.t || '')}"><input class="p-v" inputmode="numeric" placeholder="сумма" value="${fmtOpt(pt.v)}"><button class="x" aria-label="Убрать">✕</button>`;
+        el.dataset.by = pt.by || ''; el.dataset.at = pt.at || '';
+        liveFormat(el.querySelector('.p-v'));
+        el.querySelector('.p-v').addEventListener('input', () => { sumParts(); sync(); });
+        el.querySelector('.x').addEventListener('click', () => { el.remove(); sumParts(); sync(); });
+        $parts.appendChild(el);
+        return el;
+      };
+      const readParts = () => Array.from($parts.querySelectorAll('.part-row')).map((el) => ({
+        t: el.querySelector('.p-t').value.trim(), v: parseNum(el.querySelector('.p-v').value), by: el.dataset.by, at: el.dataset.at,
+      })).filter((x) => x.t || x.v != null);
+      const sumParts = () => {
+        const ps = readParts();
+        $v.readOnly = ps.length > 0;
+        $v.classList.toggle('auto', ps.length > 0);
+        if (ps.length) $v.value = fmt(ps.reduce((a, x) => a + (x.v && !isNaN(x.v) ? x.v : 0), 0));
+      };
+      (d.parts || []).forEach(partRow);
+      sumParts();
+      root.querySelector('#b-part').addEventListener('click', () => {
+        if (!readParts().length && parseNum($v.value)) partRow({ t: 'ранее', v: parseNum($v.value) });
+        partRow({ by: state.user.name, at: new Date().toISOString() }).querySelector('.p-t').focus();
+        sumParts(); sync();
+      });
       root.querySelector('#b-receipt').addEventListener('click', () => openReceipt({ ym: state.month, rowId, colKey: key }));
       root.querySelectorAll('[data-file]').forEach((b) => b.addEventListener('click', () => openReceiptFile(d.files[Number(b.dataset.file)])));
       root.querySelectorAll('[data-unfile]').forEach((b) => b.addEventListener('click', async () => {
@@ -885,10 +917,13 @@
       sync();
       if (!it) setTimeout(() => $v.focus(), 50);
       root.querySelector('#b-save').addEventListener('click', async () => {
-        const v = parseNum($v.value);
+        const parts = readParts();
+        if (parts.some((x) => x.v == null || isNaN(x.v) || x.v < 0)) return showErr(root, 'У каждой мелкой суммы впишите сумму цифрами');
+        const v = parts.length ? parts.reduce((a, x) => a + x.v, 0) : parseNum($v.value);
         if (isNaN(v)) return showErr(root, 'Введите сумму цифрами, например 25 000');
         if (v != null && v < 0) return showErr(root, 'Сумма не может быть меньше нуля');
         const data = { v: v || 0 };
+        if (parts.length) data.parts = parts.map((x) => ({ t: x.t, v: x.v, by: x.by || state.user.name, at: x.at || new Date().toISOString() }));
         if (d.files && d.files.length) data.files = d.files;
         if (st) data.st = st;
         if (st === 'partial') {
@@ -897,7 +932,7 @@
           if (p > data.v) return showErr(root, 'Оплачено не может быть больше суммы');
           data.paid = p;
         }
-        if (!data.v && !st) { if (it) await saveItems([{ id, kind: 'cell', month: state.month, data: it.data, deleted: true }]); closeSheet(); return; }
+        if (!data.v && !st && !data.files) { if (it) await saveItems([{ id, kind: 'cell', month: state.month, data: it.data, deleted: true }]); closeSheet(); return; }
         if (await saveItems([{ id, kind: 'cell', month: state.month, data }])) closeSheet();
       });
       const cl = root.querySelector('#b-clear');
@@ -1285,7 +1320,8 @@
       const n = parseNum(q('#v-sum').value);
       if (isNaN(n) || (n != null && n < 0)) return err('Введите сумму цифрами, например 25 000');
       const data = Object.assign({}, ex);
-      if (n != null) data.v = (add && ex.v ? ex.v : 0) + n;
+      const onWhat = /(?:^|\s)(?:на|за)\s+([^0-9]+?)\s*$/i.exec(text);
+      if (n != null) { if (add && ex.v) Object.assign(data, addPart(ex, onWhat ? onWhat[1] : text, n)); else { data.v = n; delete data.parts; } }
       data.v = data.v || 0;
       if (st) data.st = st; else delete data.st;
       delete data.paid;
@@ -1378,13 +1414,22 @@
     return d.st === 'paid' ? v : d.st === 'partial' ? Math.min(Number(d.paid) || 0, v) : 0;
   }
 
+  // Добавить мелкую сумму в расшифровку ячейки; итог ячейки — сумма расшифровки.
+  function addPart(ex, t, n) {
+    const parts = (ex.parts && ex.parts.length) ? ex.parts.slice() : (Number(ex.v) ? [{ t: 'ранее', v: Number(ex.v) }] : []);
+    parts.push({ t: String(t || '').slice(0, 60), v: n, by: state.user ? state.user.name : '', at: new Date().toISOString() });
+    return { parts, v: parts.reduce((sum, x) => sum + (Number(x.v) || 0), 0) };
+  }
+
   // mode 'pay' — оплата по уже записанной сумме, 'add' — новый расход (сумма растёт).
-  function applyReceipt(ex, amount, mode) {
+  function applyReceipt(ex, amount, mode, label) {
     const v0 = Number(ex.v) || 0;
     const paid = paidOf(ex) + amount;
-    let v = mode === 'add' ? v0 + amount : (v0 || amount);
-    if (paid > v) v = paid;
-    const d = Object.assign({}, ex, { v });
+    const d = Object.assign({}, ex);
+    if (mode === 'add') Object.assign(d, addPart(ex, label || 'квитанция', amount));
+    else d.v = v0 || amount;
+    if (paid > d.v) d.v = paid;
+    const v = d.v;
     delete d.paid;
     if (paid >= v) d.st = 'paid'; else { d.st = 'partial'; d.paid = paid; }
     return d;
@@ -1503,7 +1548,7 @@
         const btn = q('#r-save');
         btn.disabled = true; btn.textContent = 'Сохраняю…';
         const ex = existing();
-        const data = applyReceipt(ex, n, Number(ex.v) > 0 ? mode : 'add');
+        const data = applyReceipt(ex, n, Number(ex.v) > 0 ? mode : 'add', 'квитанция ' + fmtWhen(new Date().toISOString()).replace('сегодня в ', ''));
         const isPdf = file.type === 'application/pdf';
         const type = isPdf ? 'application/pdf' : (blob.type || file.type || 'image/jpeg');
         const ext = isPdf ? 'pdf' : type === 'image/png' ? 'png' : type === 'image/webp' ? 'webp' : 'jpg';
@@ -1621,6 +1666,7 @@
           if (d.st && c.paint) cell.fill = fill(SC[d.st]);
           const notes = [];
           if (d.st) notes.push(d.st === 'partial' ? `оплачено ${fmt(d.paidAmt)} из ${fmt(d.v)}, осталось ${fmt(d.v - d.paidAmt)}` : ST_NAME[d.st]);
+          if (d.parts && d.parts.length) notes.push(d.parts.map((x) => (x.t || '—') + ': ' + fmt(x.v)).join('\n'));
           if (d.files && d.files.length) notes.push('квитанций: ' + d.files.length);
           if (notes.length) cell.note = notes.join('\n');
         });

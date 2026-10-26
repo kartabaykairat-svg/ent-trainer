@@ -139,6 +139,12 @@
       if (this.bc) this.bc.postMessage(rows);
     },
     async history() { return lsGet('budget-demo-history', []).slice(0, 300); },
+    async upload(path, blob) {
+      const url = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(blob); });
+      localStorage.setItem('budget-demo-file:' + path, url);
+    },
+    async fileUrl(path) { try { return localStorage.getItem('budget-demo-file:' + path); } catch (e) { return null; } },
+    async removeFile(path) { try { localStorage.removeItem('budget-demo-file:' + path); } catch (e) { /* нет доступа */ } },
     subscribe(cb) { if (this.bc) this.bc.onmessage = (e) => e.data.forEach(cb); },
   };
 
@@ -172,6 +178,16 @@
       if (error) throw error;
       return data;
     },
+    async upload(path, blob, type) {
+      const { error } = await this.client.storage.from('receipts').upload(path, blob, { contentType: type, upsert: false });
+      if (error) throw error;
+    },
+    async fileUrl(path) {
+      const { data, error } = await this.client.storage.from('receipts').createSignedUrl(path, 3600);
+      if (error) throw error;
+      return data.signedUrl;
+    },
+    async removeFile(path) { await this.client.storage.from('receipts').remove([path]); },
     subscribe(cb, onStatus) {
       if (this.channel) return;
       this.channel = this.client.channel('items-live')
@@ -481,6 +497,7 @@
             inner += `<small class="sub">ост. ${fmt(d.v - d.paidAmt)}</small>`;
           }
           if (d.it && d.it.updated_by && d.it.updated_by !== SEED_BY) title += (title ? '\n' : '') + d.it.updated_by + ', ' + fmtWhen(d.it.updated_at);
+          if (d.files && d.files.length) { inner += '<span class="clip">📎</span>'; title += (title ? '\n' : '') + 'квитанций: ' + d.files.length; }
           if (state.flash.has(id)) cls += ' flash';
         }
         h += `<td class="${cls}" data-act="cell" data-row="${esc(r.id)}" data-col="${esc(c.key)}" title="${esc(title)}">${inner}</td>`;
@@ -521,7 +538,8 @@
       </div>
       <p class="hint">Цветом закрашиваются Музыкалка, Англ. Медина, колледжи и Кредит Батый. В других колонках отметка — маленькая точка в углу. Синяя точка слева — фактический приход введён вручную.</p>
       <div class="row-btns"><button class="btn" data-act="excel">⬇ Скачать в Excel</button></div>
-      <button class="mic-fab" data-act="voice" aria-label="Голосовой ввод">🎤</button>`;
+      <button class="mic-fab" data-act="voice" aria-label="Голосовой ввод">🎤</button>
+      <button class="mic-fab clip-fab" data-act="receipt" aria-label="Добавить квитанцию">📎</button>`;
   }
 
   // ---------- Долги ----------
@@ -708,7 +726,8 @@
         const row = items.get(rowId); const col = items.get(colId(h.month, key));
         const where = mt + (row ? row.data.name : 'строка') + ' · ' + (col ? col.data.title : key);
         if (removed) return where + ': очищено (было ' + cellText(o) + ')';
-        return where + ': ' + cellText(o) + ' → ' + cellText(n);
+        const addedFile = ((n.files || []).length > ((o && o.files) || []).length) ? ' + квитанция' : '';
+        return where + ': ' + cellText(o) + ' → ' + cellText(n) + addedFile;
       }
       case 'row':
         if (!o) return mt + 'добавлена строка «' + n.name + '»';
@@ -840,10 +859,21 @@
         <p class="info-box" id="partial-info"></p>
       </div>
       ${c.paint ? '' : '<p class="hint">В этой колонке ячейка не закрашивается, отметка видна точкой в углу.</p>'}
+      ${receiptListHtml(d)}
       <p class="err-text" hidden></p>
       <div class="row-btns"><button class="btn primary" id="b-save">Сохранить</button>${it ? '<button class="btn danger" id="b-clear">Очистить</button>' : ''}</div>
       ${whoLine(it)}`, (root) => {
       const $v = root.querySelector('#f-v'); const $p = root.querySelector('#f-paid');
+      root.querySelector('#b-receipt').addEventListener('click', () => openReceipt({ ym: state.month, rowId, colKey: key }));
+      root.querySelectorAll('[data-file]').forEach((b) => b.addEventListener('click', () => openReceiptFile(d.files[Number(b.dataset.file)])));
+      root.querySelectorAll('[data-unfile]').forEach((b) => b.addEventListener('click', async () => {
+        const f = d.files[Number(b.dataset.unfile)];
+        if (!await askConfirm('Убрать квитанцию ' + (f.amount ? money(f.amount) : f.name) + '? Суммы в ячейке не изменятся.', 'Убрать')) { editCell(rowId, key); return; }
+        const cur = Object.assign({}, items.get(id).data);
+        cur.files = (cur.files || []).filter((x) => x.path !== f.path);
+        if (await saveItems([{ id, kind: 'cell', month: state.month, data: cur }])) backend.removeFile(f.path).catch(() => {});
+        editCell(rowId, key);
+      }));
       const sync = () => {
         root.querySelectorAll('.st-btn').forEach((b) => b.classList.toggle('on', b.dataset.st === st));
         root.querySelector('#partial-box').hidden = st !== 'partial';
@@ -859,6 +889,7 @@
         if (isNaN(v)) return showErr(root, 'Введите сумму цифрами, например 25 000');
         if (v != null && v < 0) return showErr(root, 'Сумма не может быть меньше нуля');
         const data = { v: v || 0 };
+        if (d.files && d.files.length) data.files = d.files;
         if (st) data.st = st;
         if (st === 'partial') {
           const p = parseNum($p.value);
@@ -1274,6 +1305,252 @@
     });
   }
 
+  // ================= Квитанции =================
+  // Фото или PDF квитанции: приложение ищет в нём сумму, человек выбирает,
+  // куда записать, файл сохраняется в общем хранилище и привязывается к ячейке.
+  const abs = (p) => new URL(p, location.href).href;
+
+  async function readPdfText(file) {
+    if (!window.pdfjsLib) await loadScript('./vendor/pdf.min.js');
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = abs('./vendor/pdf.worker.min.js');
+    const pdf = await window.pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+    let text = '';
+    for (let i = 1; i <= Math.min(pdf.numPages, 3); i++) {
+      const tc = await (await pdf.getPage(i)).getTextContent();
+      const lines = {};
+      tc.items.forEach((t) => { const y = Math.round(t.transform[5]); (lines[y] = lines[y] || []).push(t); });
+      Object.keys(lines).sort((a, b) => b - a).forEach((y) => {
+        text += lines[y].sort((a, b) => a.transform[4] - b.transform[4]).map((t) => t.str).join(' ') + '\n';
+      });
+    }
+    return text;
+  }
+
+  async function readImageText(blob, onProgress) {
+    if (!window.Tesseract) await loadScript('./vendor/tesseract.min.js');
+    const worker = await window.Tesseract.createWorker('rus', 1, {
+      workerPath: abs('./vendor/tesseract-worker.min.js'),
+      logger: (m) => { if (m.status === 'recognizing text') onProgress(m.progress); },
+    });
+    try { return (await worker.recognize(blob)).data.text; } finally { worker.terminate(); }
+  }
+
+  // Суммы из текста квитанции: лучшие (рядом со словами «итого», «сумма», ₸) — первыми.
+  function receiptAmounts(text) {
+    const KEY = /(итог|всего|сумм|к оплате|оплачен|оплата|платеж|платёж|списан|перевод|total|amount)/i;
+    const best = {};
+    String(text).split(/\n/).forEach((line) => {
+      if (/(номер|телефон|тел\.|№|сч[её]т|карт|иин|бин|iin|bin|код)/i.test(line) && !KEY.test(line)) return;
+      const l = line.replace(/\d{1,2}[./-]\d{1,2}[./-]\d{2,4}/g, ' ').replace(/\d{1,2}:\d{2}(:\d{2})?/g, ' ');
+      const re = /(\d{1,3}(?:[   ]\d{3})+|\d+)(?:[.,](\d{1,2}))?(?!\d)/g;
+      let m;
+      while ((m = re.exec(l))) {
+        const digits = m[1].replace(/\D/g, '');
+        if (digits.length > 8) continue;
+        const v = Number(digits);
+        if (v < 50 || v > 50000000) continue;
+        const near = l.slice(m.index + m[0].length, m.index + m[0].length + 6);
+        const score = (KEY.test(line) ? 3 : 0) + (/₸|тг|kzt|тенге|т\b/i.test(near) ? 2 : 0) + (m[2] ? 1 : 0) + (/\s/.test(m[1]) ? 1 : 0);
+        if (best[v] == null || best[v] < score) best[v] = score;
+      }
+    });
+    return Object.keys(best).map(Number).sort((a, b) => best[b] - best[a] || b - a).slice(0, 5);
+  }
+
+  async function shrinkImage(file) {
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type) || !window.createImageBitmap) return file;
+    try {
+      const bmp = await createImageBitmap(file);
+      const k = Math.min(1, 1800 / Math.max(bmp.width, bmp.height));
+      if (k === 1 && file.size < 1500000) return file;
+      const c = document.createElement('canvas');
+      c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+      const g = c.getContext('2d');
+      g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+      g.drawImage(bmp, 0, 0, c.width, c.height);
+      const blob = await new Promise((res) => c.toBlob(res, 'image/jpeg', 0.85));
+      return blob || file;
+    } catch (e) { return file; }
+  }
+
+  function paidOf(d) {
+    const v = Number(d.v) || 0;
+    return d.st === 'paid' ? v : d.st === 'partial' ? Math.min(Number(d.paid) || 0, v) : 0;
+  }
+
+  // mode 'pay' — оплата по уже записанной сумме, 'add' — новый расход (сумма растёт).
+  function applyReceipt(ex, amount, mode) {
+    const v0 = Number(ex.v) || 0;
+    const paid = paidOf(ex) + amount;
+    let v = mode === 'add' ? v0 + amount : (v0 || amount);
+    if (paid > v) v = paid;
+    const d = Object.assign({}, ex, { v });
+    delete d.paid;
+    if (paid >= v) d.st = 'paid'; else { d.st = 'partial'; d.paid = paid; }
+    return d;
+  }
+
+  function openReceipt(pre) {
+    pre = pre || {};
+    let file = null; let blob = null; let text = '';
+    let ym = pre.ym || state.month;
+    let mode = null;
+    openSheet('Квитанция', `
+      <div class="file-btns">
+        <label class="btn primary"><input type="file" id="r-cam" accept="image/*" capture="environment" hidden>📷 Сфотографировать</label>
+        <label class="btn"><input type="file" id="r-file" accept="image/*,application/pdf" hidden>📁 Фото или PDF</label>
+      </div>
+      <div id="r-preview"></div>
+      <p class="voice-status" id="r-status"></p>
+      <div class="chips" id="r-chips"></div>
+      <label class="f">Месяц<select id="r-ym"></select></label>
+      <label class="f">Из какой строки платим<select id="r-row"></select></label>
+      <label class="f">Колонка<select id="r-col"></select></label>
+      <label class="f">Сумма по квитанции, ₸<input id="r-sum" inputmode="numeric" placeholder="найдётся сама или впишите"></label>
+      <div id="r-mode"></div>
+      <p class="info-box" id="r-info" hidden></p>
+      <p class="err-text" id="r-err" hidden></p>
+      <button class="btn primary block" id="r-save">Сохранить</button>
+      ${USE_CLOUD ? '' : '<p class="hint" style="margin-top:10px">В демо-режиме сохраняется только сумма, сам файл — нет.</p>'}`, (root) => {
+      const q = (s) => root.querySelector(s);
+      const opt = (val, label, sel) => `<option value="${esc(val)}" ${sel ? 'selected' : ''}>${esc(label)}</option>`;
+      const fillSelects = (rowId, colKey) => {
+        const M = model(ym);
+        q('#r-ym').innerHTML = months().map((m) => opt(m, ymTitle(m, true), m === ym)).join('');
+        q('#r-row').innerHTML = opt('', '— выберите —', !rowId) + M.rows.map((r) => opt(r.id, r.name, r.id === rowId)).join('');
+        q('#r-col').innerHTML = opt('', '— выберите —', !colKey) + M.cols.map((c) => opt(c.key, c.title, c.key === colKey)).join('');
+      };
+      const existing = () => { const it = items.get(cellId(q('#r-row').value, q('#r-col').value)); return it ? it.data : {}; };
+      const sync = () => {
+        const ex = existing();
+        const n = parseNum(q('#r-sum').value);
+        const v0 = Number(ex.v) || 0;
+        if (!mode) mode = v0 > 0 && paidOf(ex) < v0 ? 'pay' : 'add';
+        q('#r-mode').innerHTML = v0 > 0 ? `<div class="st-btns one">
+            <button class="st-btn none ${mode === 'pay' ? 'on' : ''}" data-mode="pay">Это оплата записанной суммы (${fmt(v0)})</button>
+            <button class="st-btn none ${mode === 'add' ? 'on' : ''}" data-mode="add">Это новый расход — прибавить к ${fmt(v0)}</button></div>` : '';
+        q('#r-mode').querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => { mode = b.dataset.mode; sync(); }));
+        const info = q('#r-info');
+        if (n && !isNaN(n) && q('#r-row').value && q('#r-col').value) {
+          const d = applyReceipt(ex, n, v0 > 0 ? mode : 'add');
+          info.textContent = 'Станет: ' + money(d.v) + (d.st === 'paid' ? ', оплачено полностью' : ', оплачено ' + fmt(d.paid) + ', осталось ' + fmt(d.v - d.paid));
+          info.hidden = false;
+        } else info.hidden = true;
+      };
+      const guessRow = (colKey) => {
+        if (!colKey) return null;
+        const filled = model(ym).rows.filter((r) => r.cells[colKey] && r.cells[colKey].v);
+        return filled.length === 1 ? filled[0].id : null;
+      };
+      fillSelects(pre.rowId || guessRow(pre.colKey), pre.colKey || null);
+      sync();
+      q('#r-ym').addEventListener('change', () => { ym = q('#r-ym').value; fillSelects(null, q('#r-col').value); mode = null; sync(); });
+      q('#r-row').addEventListener('change', () => { mode = null; sync(); });
+      q('#r-col').addEventListener('change', () => { if (!q('#r-row').value) fillSelects(guessRow(q('#r-col').value), q('#r-col').value); mode = null; sync(); });
+      q('#r-sum').addEventListener('input', sync);
+      liveFormat(q('#r-sum'));
+
+      const pick = async (f) => {
+        if (!f) return;
+        if (!/^image\//.test(f.type) && f.type !== 'application/pdf') { q('#r-status').textContent = 'Нужна картинка (фото, PNG) или PDF.'; return; }
+        file = f;
+        q('#r-err').hidden = true;
+        q('#r-chips').innerHTML = '';
+        const isPdf = f.type === 'application/pdf';
+        q('#r-preview').innerHTML = isPdf ? `<div class="voice-heard">📄 ${esc(f.name)}</div>` : `<img class="r-img" alt="Квитанция" src="${URL.createObjectURL(f)}">`;
+        blob = isPdf ? f : await shrinkImage(f);
+        q('#r-status').textContent = 'Ищу сумму в квитанции…';
+        try {
+          text = isPdf ? await readPdfText(f) : await readImageText(blob, (p) => { q('#r-status').textContent = 'Читаю квитанцию… ' + Math.round(p * 100) + '%'; });
+        } catch (e) {
+          console.error(e);
+          text = '';
+        }
+        if (file !== f) return;
+        const sums = receiptAmounts(text);
+        if (!sums.length) {
+          q('#r-status').textContent = isPdf ? 'Сумму не нашёл — впишите её сами.' : 'Не смог прочитать сумму на фото — впишите её сами.';
+        } else {
+          q('#r-status').textContent = 'Нашёл сумму. Если не та — нажмите другую или впишите.';
+          q('#r-chips').innerHTML = sums.map((s, i) => `<button class="chip ${i === 0 ? 'on' : ''}" data-sum="${s}">${fmt(s)} ₸</button>`).join('');
+          q('#r-chips').querySelectorAll('[data-sum]').forEach((b) => b.addEventListener('click', () => {
+            q('#r-chips').querySelectorAll('.chip').forEach((x) => x.classList.toggle('on', x === b));
+            q('#r-sum').value = fmt(Number(b.dataset.sum)); sync();
+          }));
+          if (!q('#r-sum').value) q('#r-sum').value = fmt(sums[0]);
+        }
+        // Колонку можно угадать по тексту (например, Tele2 → телефон).
+        if (text && !q('#r-col').value) {
+          const t = norm(text);
+          const M = model(ym);
+          const col = bestMatch(t, M.cols.map((c) => ({ key: c.key, words: (COL_WORDS[c.key] || []).concat(stems(c.title)) })));
+          if (col) fillSelects(q('#r-row').value || guessRow(col.key), col.key);
+        }
+        mode = null;
+        sync();
+      };
+      q('#r-cam').addEventListener('change', (e) => pick(e.target.files[0]));
+      q('#r-file').addEventListener('change', (e) => pick(e.target.files[0]));
+
+      q('#r-save').addEventListener('click', async () => {
+        const err = (m) => { const e = q('#r-err'); e.textContent = m; e.hidden = false; };
+        if (!file) return err('Добавьте фото или PDF квитанции');
+        const rowId = q('#r-row').value; const key = q('#r-col').value;
+        if (!rowId || !key) return err('Выберите строку и колонку');
+        const n = parseNum(q('#r-sum').value);
+        if (n == null || isNaN(n) || n <= 0) return err('Впишите сумму по квитанции, например 26 000');
+        if (!canEdit()) return;
+        const btn = q('#r-save');
+        btn.disabled = true; btn.textContent = 'Сохраняю…';
+        const ex = existing();
+        const data = applyReceipt(ex, n, Number(ex.v) > 0 ? mode : 'add');
+        const isPdf = file.type === 'application/pdf';
+        const type = isPdf ? 'application/pdf' : (blob.type || file.type || 'image/jpeg');
+        const ext = isPdf ? 'pdf' : type === 'image/png' ? 'png' : type === 'image/webp' ? 'webp' : 'jpg';
+        const path = ym + '/' + uid() + '.' + ext;
+        let uploaded = false;
+        try { await backend.upload(path, blob, type); uploaded = true; } catch (e) {
+          console.error(e);
+          if (USE_CLOUD) { btn.disabled = false; btn.textContent = 'Сохранить'; return err('Не удалось загрузить квитанцию. Проверьте интернет и попробуйте ещё раз.'); }
+        }
+        if (uploaded) data.files = (ex.files || []).concat([{ path, name: file.name || ('квитанция.' + ext), type, amount: n, at: new Date().toISOString(), by: state.user.name }]);
+        const ok = await saveItems([{ id: cellId(rowId, key), kind: 'cell', month: ym, data }]);
+        if (!ok) {
+          if (uploaded) backend.removeFile(path).catch(() => {});
+          btn.disabled = false; btn.textContent = 'Сохранить';
+          return;
+        }
+        const M = model(ym);
+        const r = M.rows.find((x) => x.id === rowId); const c = M.cols.find((x) => x.key === key);
+        closeSheet();
+        state.month = ym; state.tab = 'table'; render();
+        toast('Квитанция добавлена: ' + r.name + ' · ' + c.title + ' — ' + money(n));
+      });
+    });
+  }
+
+  async function openReceiptFile(f) {
+    try {
+      const url = await backend.fileUrl(f.path);
+      if (!url) { toast('Файл не сохранён на этом устройстве', true); return; }
+      const a = document.createElement('a');
+      a.href = url; a.target = '_blank'; a.rel = 'noopener';
+      document.body.appendChild(a); a.click(); a.remove();
+    } catch (e) {
+      console.error(e);
+      toast('Не удалось открыть квитанцию. Проверьте интернет.', true);
+    }
+  }
+
+  function receiptListHtml(d) {
+    const files = (d && d.files) || [];
+    return `<div class="small muted" style="margin-top:6px">Квитанции</div>
+      <div class="r-list">${files.map((f, i) => `<div class="r-item">
+          <button class="r-open" data-file="${i}">${/pdf/.test(f.type) ? '📄' : '🖼'} ${f.amount ? money(f.amount) : esc(f.name)}<small>${esc(f.by || '')}, ${fmtWhen(f.at)}</small></button>
+          <button class="x" data-unfile="${i}" aria-label="Убрать квитанцию">✕</button></div>`).join('') || '<p class="hint" style="margin:4px 0">Пока нет.</p>'}</div>
+      <button class="btn block" id="b-receipt" style="margin-bottom:12px">📎 Добавить квитанцию</button>`;
+  }
+
   // ================= Скачать в Excel =================
   async function exportExcel() {
     const ym = state.month;
@@ -1342,7 +1619,10 @@
           if (!d) return;
           if (d.v) cell.value = d.v;
           if (d.st && c.paint) cell.fill = fill(SC[d.st]);
-          if (d.st) cell.note = d.st === 'partial' ? `оплачено ${fmt(d.paidAmt)} из ${fmt(d.v)}, осталось ${fmt(d.v - d.paidAmt)}` : ST_NAME[d.st];
+          const notes = [];
+          if (d.st) notes.push(d.st === 'partial' ? `оплачено ${fmt(d.paidAmt)} из ${fmt(d.v)}, осталось ${fmt(d.v - d.paidAmt)}` : ST_NAME[d.st]);
+          if (d.files && d.files.length) notes.push('квитанций: ' + d.files.length);
+          if (notes.length) cell.note = notes.join('\n');
         });
         row.getCell(restCol).value = { formula: `D${rn}-SUM(${L(firstExp)}${rn}:${L(lastExp)}${rn})`, result: r.rest };
       }
@@ -1450,6 +1730,7 @@
     if (a === 'col') { editCol(t.dataset.col); return; }
     if (a === 'newmonth') { newMonthDialog(); return; }
     if (a === 'voice') { openVoice(); return; }
+    if (a === 'receipt') { openReceipt(); return; }
     if (a === 'debt') { editDebt(t.dataset.id); return; }
     if (a === 'debt-add') { editDebt(null); return; }
     if (a === 'member-add') { memberDialog(false); return; }

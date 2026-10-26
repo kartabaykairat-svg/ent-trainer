@@ -10,6 +10,10 @@
 > Ещё одно отдельное приложение — [`budget/`](./budget): «Семейный бюджет»
 > (общая таблица расходов для семьи). Инструкция — в
 > [`budget/README.md`](./budget/README.md).
+>
+> В папке [`akmaral-assistant/`](./akmaral-assistant) — системный промпт
+> личного ИИ-ассистента Акмарал (NeiroOrda, UNC.TECH) и инструкция,
+> как подключить его в Claude Projects, ChatGPT или Telegram-бот.
 
 ## Запуск (рекомендуется)
 1. Откройте PowerShell в папке `ent-trainer`:

@@ -488,10 +488,7 @@
         let title = '';
         if (d) {
           inner = fmtOpt(d.v);
-          if (d.st) {
-            if (c.paint) cls += ' st-' + d.st;
-            else inner += `<span class="dot ${d.st}"></span>`;
-          }
+          if (d.st) cls += ' st-' + d.st;
           if (d.st === 'partial') {
             title = `оплачено ${fmt(d.paidAmt)} из ${fmt(d.v)}, осталось ${fmt(d.v - d.paidAmt)}`;
             inner += `<small class="sub">ост. ${fmt(d.v - d.paidAmt)}</small>`;
@@ -537,7 +534,7 @@
         <span><i class="sw unpaid"></i>не оплачено</span>
         <span><i class="sw partial"></i>частично</span>
       </div>
-      <p class="hint">Цветом закрашиваются Музыкалка, Англ. Медина, колледжи и Кредит Батый. В других колонках отметка — маленькая точка в углу. Синяя точка слева — фактический приход введён вручную.</p>
+      <p class="hint">Ячейка закрашивается по отметке оплаты. Синяя точка слева — фактический приход введён вручную.</p>
       <div class="row-btns"><button class="btn" data-act="excel">⬇ Скачать в Excel</button></div>
       <button class="mic-fab" data-act="voice" aria-label="Голосовой ввод">🎤</button>
       <button class="mic-fab clip-fab" data-act="receipt" aria-label="Добавить квитанцию">📎</button>`;
@@ -862,7 +859,6 @@
         <label class="f">Сколько уже оплачено, ₸<input id="f-paid" inputmode="numeric" value="${fmtOpt(d.paid)}"></label>
         <p class="info-box" id="partial-info"></p>
       </div>
-      ${c.paint ? '' : '<p class="hint">В этой колонке ячейка не закрашивается, отметка видна точкой в углу.</p>'}
       ${receiptListHtml(d)}
       <p class="err-text" hidden></p>
       <div class="row-btns"><button class="btn primary" id="b-save">Сохранить</button>${it ? '<button class="btn danger" id="b-clear">Очистить</button>' : ''}</div>
@@ -1663,7 +1659,7 @@
           const d = r.cells[c.key];
           if (!d) return;
           if (d.v) cell.value = d.v;
-          if (d.st && c.paint) cell.fill = fill(SC[d.st]);
+          if (d.st) cell.fill = fill(SC[d.st]);
           const notes = [];
           if (d.st) notes.push(d.st === 'partial' ? `оплачено ${fmt(d.paidAmt)} из ${fmt(d.v)}, осталось ${fmt(d.v - d.paidAmt)}` : ST_NAME[d.st]);
           if (d.parts && d.parts.length) notes.push(d.parts.map((x) => (x.t || '—') + ': ' + fmt(x.v)).join('\n'));

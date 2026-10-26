@@ -483,7 +483,7 @@
       cols.forEach((c) => {
         const d = r.cells[c.key];
         const id = cellId(r.id, c.key);
-        let cls = 'num ed';
+        let cls = 'num ed' + (c.group ? ' g-' + c.group : '');
         let inner = '';
         let title = '';
         if (d) {
@@ -507,7 +507,8 @@
     const regular = M.rows.filter((r) => !r.akmaral);
     const akm = M.rows.filter((r) => r.akmaral);
     let body = regular.map(rowHtml).join('');
-    const emptyCells = '<td class="ed" data-act="newrow"></td>'.repeat(cols.length + 4);
+    const emptyCells = '<td class="ed" data-act="newrow"></td>'.repeat(3) +
+      cols.map((c) => `<td class="ed ${c.group ? 'g-' + c.group : ''}" data-act="newrow"></td>`).join('') + '<td class="ed" data-act="newrow"></td>';
     for (let i = 0; i < 2; i++) body += `<tr class="empty"><th class="sticky ed" data-act="newrow">＋ строка</th>${emptyCells}</tr>`;
     body += akm.map(rowHtml).join('');
 
@@ -1648,6 +1649,7 @@
     const firstData = rn;
     order.forEach((r) => {
       const row = ws.getRow(rn);
+      cols.forEach((c, i) => { if (c.group) row.getCell(firstExp + i).fill = fill(GC[c.group]); });
       if (r) {
         row.getCell(1).value = r.name + (r.note ? ' (' + r.note + ')' : '');
         if (r.income) row.getCell(2).value = r.income;

@@ -68,3 +68,15 @@ begin
   alter publication supabase_realtime add table public.items;
 exception when duplicate_object then null;
 end $$;
+
+-- Квитанции (фото и PDF): закрытое хранилище, доступ по ссылке из приложения.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('receipts', 'receipts', false, 10485760, array['image/jpeg','image/png','image/webp','image/heic','image/heif','application/pdf'])
+on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "family receipts read" on storage.objects;
+create policy "family receipts read" on storage.objects for select to anon, authenticated using (bucket_id = 'receipts');
+drop policy if exists "family receipts upload" on storage.objects;
+create policy "family receipts upload" on storage.objects for insert to anon, authenticated with check (bucket_id = 'receipts');
+drop policy if exists "family receipts delete" on storage.objects;
+create policy "family receipts delete" on storage.objects for delete to anon, authenticated using (bucket_id = 'receipts');

@@ -359,3 +359,16 @@ label.chk input { width: 22px; height: 22px; }
 .r-open { flex: 1; min-width: 0; min-height: 48px; text-align: left; padding: 6px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); font-weight: 700; }
 .r-open small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
 .r-item .x { background: #fff; border: 1px solid var(--line); }
+
+/* ---------- Расшифровка суммы ---------- */
+.parts { display: flex; flex-direction: column; gap: 6px; margin: 6px 0 8px; }
+.part-row { display: flex; gap: 6px; align-items: center; }
+.part-row input { min-width: 0; min-height: 44px; padding: 0 10px; border: 1px solid #cfd5dc; border-radius: 10px; font-size: 16px; background: #fff; }
+.part-row .p-t { flex: 1.4; }
+.part-row .p-v { flex: 1; text-align: right; font-variant-numeric: tabular-nums; }
+.part-row .x { width: 40px; height: 40px; background: #fff; border: 1px solid var(--line); }
+label.f input.auto { background: var(--bg); color: var(--text); }
+.xl td .parts-n {
+  position: absolute; right: 3px; bottom: 2px; font-size: 9.5px; line-height: 1; font-weight: 700;
+  color: var(--accent); background: var(--accent-soft); border-radius: 6px; padding: 1px 3px;
+}

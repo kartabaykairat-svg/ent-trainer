@@ -25,6 +25,8 @@ export function humanError(e: unknown): string {
     return 'Слишком много попыток. Подождите немного и повторите.';
   if (/Unable to validate email|invalid email|valid email/i.test(msg)) return 'Неверный формат email.';
   if (/Invalid TOTP|invalid.*code|otp.*(expired|invalid)/i.test(msg)) return 'Неверный или устаревший код.';
+  if (/entries changed during rotation/i.test(msg))
+    return 'Записи изменились на другом устройстве. Ничего не потеряно — повторите смену мастер-пароля.';
   if (err?.code === '42P01' || err?.code === 'PGRST205' || err?.code === 'PGRST202' || /does not exist|schema cache/i.test(msg))
     return 'База данных не настроена: выполните файл schema.sql в Supabase (см. README).';
   if (err?.code === '42501' || /row-level security|permission denied/i.test(msg))

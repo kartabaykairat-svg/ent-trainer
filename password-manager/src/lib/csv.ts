@@ -34,9 +34,9 @@ export function parseCsv(text: string): string[][] {
 }
 
 function esc(v: string): string {
-  // защита от CSV-инъекций в Excel: значения, начинающиеся с = + - @, экранируются
-  const safe = /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
-  return /[",\n\r]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
+  // Значения не изменяются (иначе пароль после переноса в другой менеджер
+  // станет другим). Файл предназначен для импорта, а не для открытия в Excel.
+  return /[",\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
 }
 
 export function toCsv(rows: string[][]): string {

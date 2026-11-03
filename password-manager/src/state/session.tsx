@@ -452,8 +452,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (bad) throw new AppError('Часть записей не расшифровывается — смена пароля отменена, чтобы не потерять данные.');
       const salt = newSalt();
       const newKey = await deriveKey(newPassword, salt, KDF_ITERATIONS);
+      const readAt = new Map(rows.map((r) => [r.id, r.updated_at]));
       const newRows = await Promise.all(
-        list.map(async (e) => ({ id: e.id, data: await encryptEntry(newKey, userId, e) })),
+        list.map(async (e) => ({ id: e.id, data: await encryptEntry(newKey, userId, e), updated_at: readAt.get(e.id) })),
       );
       const newVault: VaultRow = {
         user_id: userId,
@@ -478,12 +479,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     await backend.deleteAccount();
     if (u) await clearSnapshot(u.id);
     wipeMemory();
-    userRef.current = null;
     vaultRef.current = null;
     rowsRef.current = new Map();
-    setUser(null);
-    if (backend.mode === 'local') setPhase('setup');
-    else setPhase('auth');
+    if (backend.mode === 'local') {
+      // в локальном режиме «пользователь» остаётся тем же — можно сразу создать новое хранилище
+      userRef.current = { id: 'local', email: null };
+      setUser(userRef.current);
+      setPhase('setup');
+    } else {
+      userRef.current = null;
+      setUser(null);
+      setPhase('auth');
+    }
   }, [offline, wipeMemory]);
 
   // ---------- автоблокировка ----------

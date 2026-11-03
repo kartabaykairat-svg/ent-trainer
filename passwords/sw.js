@@ -2,7 +2,7 @@
  * Кэширует только оболочку приложения (HTML/JS/CSS/иконки).
  * Запросы к Supabase и HaveIBeenPwned НЕ кэшируются здесь:
  * офлайн-копия хранилища — это зашифрованные строки в IndexedDB. */
-const VERSION = 'da6d2d01b732';
+const VERSION = '89d7d295659e';
 const CACHE = `pm-shell-${VERSION}`;
 const PRECACHE = [
   "./",
@@ -13,7 +13,7 @@ const PRECACHE = [
   "./icon-192.png",
   "./icon-512.png",
   "./manifest.webmanifest",
-  "./assets/index-J53e43bp.js",
+  "./assets/index-C4-7Bguj.js",
   "./assets/wordlist-DDS40H4Q.js",
   "./assets/index-CndMthfU.css"
 ];

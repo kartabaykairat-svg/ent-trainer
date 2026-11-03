@@ -141,7 +141,7 @@ export function createSupabaseBackend(): Backend {
           p_iterations: vault.kdf_iterations,
           p_verifier: vault.verifier,
           p_meta: vault.meta,
-          p_entries: rows.map((r) => ({ id: r.id, data: r.data })),
+          p_entries: rows.map((r) => ({ id: r.id, data: r.data, updated_at: r.updated_at })),
         }),
       );
     },

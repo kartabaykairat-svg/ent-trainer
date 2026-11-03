@@ -137,10 +137,12 @@ begin
     raise exception 'vault not found';
   end if;
 
+  -- updated_at сверяется: если запись изменили на другом устройстве после
+  -- того, как клиент её прочитал, строка не обновится и вся транзакция откатится.
   update public.pm_entries e
      set data = x.data
-    from jsonb_to_recordset(p_entries) as x(id uuid, data text)
-   where e.id = x.id and e.user_id = auth.uid();
+    from jsonb_to_recordset(p_entries) as x(id uuid, data text, updated_at timestamptz)
+   where e.id = x.id and e.user_id = auth.uid() and e.updated_at = x.updated_at;
   get diagnostics v_updated = row_count;
 
   select count(*) into v_total from public.pm_entries where user_id = auth.uid();

@@ -10,6 +10,10 @@
 > Ещё одно отдельное приложение — [`budget/`](./budget): «Семейный бюджет»
 > (общая таблица расходов для семьи). Инструкция — в
 > [`budget/README.md`](./budget/README.md).
+>
+> И ещё одно — [`passwords/`](./passwords): «Менеджер паролей» с шифрованием
+> на устройстве (исходники в [`password-manager/`](./password-manager),
+> инструкция — в [`password-manager/README.md`](./password-manager/README.md)).
 
 ## Запуск (рекомендуется)
 1. Откройте PowerShell в папке `ent-trainer`:
